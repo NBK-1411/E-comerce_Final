@@ -1,0 +1,58 @@
+# Sensitive configuration files
+settings/db_cred.php
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+php_error_log
+
+# Uploaded files (user-generated content)
+uploads/
+images/uploads/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+
+# Node modules (if any)
+node_modules/
+vendor/
+
+# Composer
+composer.lock
+composer.phar
+
+# Database dumps
+*.sql
+*.dump
+database/*.sql
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
