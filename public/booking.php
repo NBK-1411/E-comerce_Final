@@ -718,6 +718,10 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
                 dataType: 'json',
                 success: function (result) {
                     if (result.success && result.payment_required && !isReservation) {
+                        console.log('Initializing Paystack payment...', {
+                            booking_id: result.booking_id,
+                            amount: totalAmount
+                        });
                         $.ajax({
                             url: '../actions/payment_init_paystack_action.php',
                             type: 'POST',
@@ -727,16 +731,40 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
                             },
         dataType: 'json',
                             success: function (paymentResult) {
+                                console.log('Paystack initialization response:', paymentResult);
                                 if (paymentResult.success) {
+                                    console.log('Redirecting to Paystack:', paymentResult.authorization_url);
                                     window.location.href = paymentResult.authorization_url;
                                 } else {
-                                    showAlert(paymentResult.message || 'Failed to initialize payment', 'danger');
+                                    let errorMsg = paymentResult.message || 'Failed to initialize payment';
+                                    // Show debug info in console for troubleshooting
+                                    if (paymentResult.debug) {
+                                        console.error('Payment Error Details:', paymentResult.debug);
+                                        // Append callback URL info if available
+                                        if (paymentResult.debug.callback_url) {
+                                            errorMsg += ' (Callback URL: ' + paymentResult.debug.callback_url + ')';
+                                        }
+                                    }
+                                    showAlert(errorMsg, 'danger');
                                     submitBtn.disabled = false;
                                     submitBtn.innerHTML = 'Pay GH₵' + totalAmount.toLocaleString();
                                 }
                             },
-                            error: function () {
-                                showAlert('Payment initialization failed. Please try again.', 'danger');
+                            error: function (xhr, status, error) {
+                                let errorMsg = 'Payment initialization failed. Please try again.';
+                                // Try to parse error response if available
+                                try {
+                                    const errorData = JSON.parse(xhr.responseText);
+                                    if (errorData.message) {
+                                        errorMsg = errorData.message;
+                                    }
+                                    if (errorData.debug) {
+                                        console.error('Payment Error Details:', errorData.debug);
+                                    }
+                                } catch (e) {
+                                    console.error('Payment Error:', status, error);
+                                }
+                                showAlert(errorMsg, 'danger');
                                 submitBtn.disabled = false;
                                 submitBtn.innerHTML = 'Pay GH₵' + totalAmount.toLocaleString();
                             }
