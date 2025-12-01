@@ -399,6 +399,15 @@ body {
                     </svg>
                     <span class="text-sm font-medium" style="color: var(--text-primary);">Add New Venue</span>
                 </a>
+                <a href="create_activity.php" class="flex h-auto flex-col items-center gap-2 rounded-lg border bg-transparent p-4 text-center transition"
+                    style="border-color: var(--border-color); color: var(--text-primary);"
+                    onmouseover="this.style.backgroundColor='var(--bg-card)'"
+                    onmouseout="this.style.backgroundColor='transparent'">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--text-primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                    </svg>
+                    <span class="text-sm font-medium" style="color: var(--text-primary);">Create Activity</span>
+                </a>
                 <button onclick="showTab('bookings')" class="flex h-auto flex-col items-center gap-2 rounded-lg border bg-transparent p-4 text-center transition"
                     style="border-color: var(--border-color); color: var(--text-primary);"
                     onmouseover="this.style.backgroundColor='var(--bg-card)'"

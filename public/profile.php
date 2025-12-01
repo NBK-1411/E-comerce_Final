@@ -3,6 +3,7 @@ require_once(__DIR__ . '/../settings/core.php');
 require_once(__DIR__ . '/../controllers/booking_controller.php');
 require_once(__DIR__ . '/../controllers/customer_controller.php');
 require_once(__DIR__ . '/../controllers/venue_controller.php');
+require_once(__DIR__ . '/../controllers/rsvp_controller.php');
 require_once(__DIR__ . '/../controllers/notification_controller.php');
 require_once(__DIR__ . '/../includes/site_nav.php');
 
@@ -23,6 +24,24 @@ if ($past_bookings === false)
 
 // Get all bookings for calendar
 $all_bookings = array_merge($upcoming_bookings, $past_bookings);
+
+// Get user's RSVPs
+$user_rsvps = get_user_rsvps_ctr($user_id);
+if ($user_rsvps === false) {
+    $user_rsvps = [];
+}
+
+// Separate upcoming and past RSVPs
+$upcoming_rsvps = [];
+$past_rsvps = [];
+$now = date('Y-m-d H:i:s');
+foreach ($user_rsvps as $rsvp) {
+    if (!empty($rsvp['start_at']) && $rsvp['start_at'] >= $now) {
+        $upcoming_rsvps[] = $rsvp;
+    } else {
+        $past_rsvps[] = $rsvp;
+    }
+}
 
 // Get notifications if on notifications tab
 $notifications = [];
@@ -148,8 +167,8 @@ function time_ago($datetime) {
         }
 
         .fc-daygrid-event {
-            cursor: pointer;
-        }
+    cursor: pointer;
+}
 </style>
 </head>
 
@@ -186,14 +205,14 @@ function time_ago($datetime) {
                         <div>
                             <span class="font-semibold" style="color: var(--text-primary);"><?php echo count($upcoming_bookings); ?></span>
                             <span class="ml-1" style="color: var(--text-secondary);">Upcoming</span>
-                        </div>
+                    </div>
                         <div>
                             <span class="font-semibold" style="color: var(--text-primary);"><?php echo count($past_bookings); ?></span>
                             <span class="ml-1" style="color: var(--text-secondary);">Past</span>
-                        </div>
                     </div>
-                </div>
-
+                    </div>
+                    </div>
+                    
                 <div class="flex gap-2">
                     <button onclick="openEditModal()"
                         class="inline-flex items-center justify-center gap-2 rounded-lg border bg-transparent px-3 py-1.5 text-sm font-medium transition"
@@ -208,7 +227,7 @@ function time_ago($datetime) {
                         Edit Profile
                     </button>
                 </div>
-            </div>
+                </div>
 
             <!-- Member Info -->
             <div
@@ -224,7 +243,7 @@ function time_ago($datetime) {
                     </svg>
                     Member since <?php echo date('M Y', strtotime($user['created_at'])); ?>
                         </div>
-                    </div>
+                        </div>
 
                 <!-- Tabs -->
             <div class="mb-6 grid w-full grid-cols-5 gap-1 rounded-lg p-1" style="background-color: var(--bg-card);">
@@ -290,7 +309,7 @@ function time_ago($datetime) {
                         </span>
                             <?php endif; ?>
                 </button>
-            </div>
+                        </div>
 
             <!-- Tab Content -->
             <!-- Bookings Tab -->
@@ -313,8 +332,8 @@ function time_ago($datetime) {
                                 onmouseout="this.style.color='var(--text-secondary)'">
                                 Calendar
                             </button>
-                        </div>
                     </div>
+                </div>
                     
                     <!-- Filter Pills -->
                     <div class="flex gap-2">
@@ -343,7 +362,7 @@ function time_ago($datetime) {
                             Past
                             </button>
                     </div>
-                </div>
+            </div>
 
                 <!-- Bookings List View -->
                 <div id="bookingsList" class="space-y-4">
@@ -405,7 +424,7 @@ function time_ago($datetime) {
                                     <img src="<?php echo htmlspecialchars($venue_image); ?>"
                                         alt="<?php echo htmlspecialchars($booking['venue_title']); ?>"
                                         class="h-full w-full object-cover">
-                                </div>
+                            </div>
 
                                 <!-- Content -->
                                 <div class="flex flex-1 flex-col">
@@ -422,7 +441,7 @@ function time_ago($datetime) {
                                                 </svg>
                                                 <?php echo htmlspecialchars($booking['location_text']); ?>
                                         </p>
-                                    </div>
+                            </div>
                                         <span
                                             class="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-semibold"
                                             style="<?php echo $status_style[$booking['status']] ?? $status_style['requested']; ?>">
@@ -433,7 +452,7 @@ function time_ago($datetime) {
                                             </svg>
                                         <?php echo ucfirst($booking['status']); ?>
                                     </span>
-                                </div>
+                            </div>
                                 
                                     <div class="mt-2 flex flex-wrap gap-3 text-sm text-[#9b9ba1]">
                                         <div class="flex items-center gap-1">
@@ -446,7 +465,7 @@ function time_ago($datetime) {
                                                 <line x1="3" y1="10" x2="21" y2="10" />
                                             </svg>
                                             <?php echo date('d M Y', strtotime($booking['booking_date'])); ?>
-                                    </div>
+                            </div>
                                         <div class="flex items-center gap-1">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24"
                                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -457,8 +476,8 @@ function time_ago($datetime) {
                                                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                                             </svg>
                                             <?php echo $booking['guest_count']; ?> guests
-                                    </div>
-                                </div>
+                        </div>
+                    </div>
                                 
                                     <div class="mt-auto flex items-center gap-2 pt-2">
                                         <?php if ($booking['status'] === 'confirmed'): ?>
@@ -472,7 +491,7 @@ function time_ago($datetime) {
                                                 </svg>
                                                 Show QR
                                             </button>
-                                <?php endif; ?>
+                            <?php endif; ?>
                                         <a href="venue_detail.php?id=<?php echo $booking['venue_id']; ?>"
                                             class="inline-flex items-center justify-center rounded-lg border border-transparent bg-transparent px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#1a1a1a]">
                                             View Details
@@ -481,7 +500,7 @@ function time_ago($datetime) {
                                             <button onclick="cancelBooking(<?php echo $booking['booking_id']; ?>)"
                                                 class="inline-flex items-center justify-center rounded-lg border border-transparent bg-transparent px-3 py-1.5 text-xs font-medium text-red-500 transition hover:bg-red-500/10">
                                                 Cancel
-                                    </button>
+                        </button>
                                     <?php endif; ?>
                                     </div>
                                 </div>
@@ -496,30 +515,143 @@ function time_ago($datetime) {
                 </div>
             </div>
 
-            <!-- RSVPs Tab (Placeholder) -->
+            <!-- RSVPs Tab -->
             <div id="tab-rsvps" class="tab-content <?php echo $active_tab === 'rsvps' ? '' : 'hidden'; ?>">
-                <div class="flex flex-col items-center justify-center py-12 text-center">
-                    <div class="mb-4 rounded-full bg-[#1a1a1a] p-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#9b9ba1]" viewBox="0 0 24 24"
-                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round">
-                            <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                    </div>
-                    <h3 class="mb-1 font-semibold text-white">No RSVPs yet</h3>
-                    <p class="mb-4 text-sm text-[#9b9ba1]">RSVPs for activities will appear here</p>
-                </div>
-            </div>
+                <?php if (empty($user_rsvps)): ?>
+                    <div class="flex flex-col items-center justify-center py-12 text-center">
+                        <div class="mb-4 rounded-full bg-[#1a1a1a] p-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#9b9ba1]" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                        </div>
+                        <h3 class="mb-1 font-semibold text-white">No RSVPs yet</h3>
+                        <p class="mb-4 text-sm text-[#9b9ba1]">RSVPs for activities will appear here</p>
+                        <a href="search.php?type=activity"
+                            class="rounded-lg border bg-transparent px-4 py-2 text-sm font-medium transition"
+                            style="border-color: var(--border-color); color: var(--text-primary);"
+                            onmouseover="this.style.backgroundColor='var(--bg-card)'"
+                            onmouseout="this.style.backgroundColor='transparent'">
+                            Browse Activities
+                        </a>
+                            </div>
+                        <?php else: ?>
+                    <!-- Upcoming RSVPs -->
+                    <?php if (!empty($upcoming_rsvps)): ?>
+                        <div class="mb-6">
+                            <h3 class="mb-4 text-lg font-semibold" style="color: var(--text-primary);">Upcoming</h3>
+                            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                <?php foreach ($upcoming_rsvps as $rsvp):
+                                    $photos = json_decode($rsvp['photos_json'] ?? '[]', true);
+                                    $photo = !empty($photos) ? $photos[0] : '../images/portfolio/01.jpg';
+                                    if (strpos($photo, 'uploads/') === 0) {
+                                        $photo = '../' . $photo;
+                                    }
+                                    $date_display = !empty($rsvp['start_at']) ? date('M j, Y', strtotime($rsvp['start_at'])) : '';
+                                    $time_display = !empty($rsvp['start_at']) ? date('g:i A', strtotime($rsvp['start_at'])) : '';
+                                    $price_display = isset($rsvp['is_free']) && $rsvp['is_free'] ? 'FREE' : 'GH₵' . number_format($rsvp['price_min'] ?? 0, 0);
+                                ?>
+                                    <a href="activity_detail.php?id=<?php echo $rsvp['activity_id']; ?>"
+                                        class="group relative flex flex-col overflow-hidden rounded-xl transition-all hover:shadow-lg"
+                                        style="background-color: var(--bg-card);">
+                                        <div class="relative aspect-[4/3] overflow-hidden" style="background-color: var(--bg-primary);">
+                                            <img src="<?php echo htmlspecialchars($photo); ?>"
+                                                alt="<?php echo htmlspecialchars($rsvp['activity_title']); ?>"
+                                                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
+                                            <?php if ($date_display): ?>
+                                                <span class="absolute bottom-2 left-2 rounded border backdrop-blur-sm px-2 py-1 text-xs"
+                                                    style="border-color: var(--border-color); background-color: var(--bg-primary); opacity: 0.9; color: var(--text-primary);">
+                                                    <?php echo $date_display; ?>
+                                                </span>
+                                            <?php endif; ?>
+                                            <span class="absolute top-2 right-2 rounded border px-2 py-1 text-xs font-medium"
+                                                style="border-color: var(--accent); background-color: var(--accent); color: #ffffff; opacity: 0.9;">
+                                                <?php echo ucfirst($rsvp['status']); ?>
+                                            </span>
+                                        </div>
+                                        <div class="flex flex-1 flex-col p-3">
+                                            <h3 class="line-clamp-1 text-base font-semibold transition-colors group-hover:text-[#FF6B35]"
+                                                style="color: var(--text-primary);">
+                                                <?php echo htmlspecialchars($rsvp['activity_title']); ?>
+                                            </h3>
+                                            <div class="mt-1 flex items-center gap-2 text-xs" style="color: var(--text-secondary);">
+                                                <?php if ($time_display): ?>
+                                                    <span><?php echo $time_display; ?></span>
+                                                    <span>•</span>
+                                                <?php endif; ?>
+                                                <span><?php echo htmlspecialchars($rsvp['location_text'] ?? ''); ?></span>
+                                            </div>
+                                            <div class="mt-auto flex items-end justify-between pt-2">
+                                    <div>
+                                                    <span class="text-lg font-bold" style="color: var(--text-primary);"><?php echo $price_display; ?></span>
+                                    </div>
+                                                <?php if ($rsvp['guest_count'] > 1): ?>
+                                                    <span class="rounded border px-2 py-1 text-xs"
+                                                        style="border-color: var(--border-color); background-color: var(--bg-secondary); color: var(--text-secondary);">
+                                                        <?php echo $rsvp['guest_count']; ?> guests
+                                    </span>
+                                                <?php endif; ?>
+                                </div>
+                                        </div>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
 
-            <!-- Collections Tab (Placeholder) -->
+                    <!-- Past RSVPs -->
+                    <?php if (!empty($past_rsvps)): ?>
+                                    <div>
+                            <h3 class="mb-4 text-lg font-semibold" style="color: var(--text-primary);">Past</h3>
+                            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                <?php foreach ($past_rsvps as $rsvp):
+                                    $photos = json_decode($rsvp['photos_json'] ?? '[]', true);
+                                    $photo = !empty($photos) ? $photos[0] : '../images/portfolio/01.jpg';
+                                    if (strpos($photo, 'uploads/') === 0) {
+                                        $photo = '../' . $photo;
+                                    }
+                                    $date_display = !empty($rsvp['start_at']) ? date('M j, Y', strtotime($rsvp['start_at'])) : '';
+                                    $price_display = isset($rsvp['is_free']) && $rsvp['is_free'] ? 'FREE' : 'GH₵' . number_format($rsvp['price_min'] ?? 0, 0);
+                                ?>
+                                    <a href="activity_detail.php?id=<?php echo $rsvp['activity_id']; ?>"
+                                        class="group relative flex flex-col overflow-hidden rounded-xl transition-all hover:shadow-lg opacity-75"
+                                        style="background-color: var(--bg-card);">
+                                        <div class="relative aspect-[4/3] overflow-hidden" style="background-color: var(--bg-primary);">
+                                            <img src="<?php echo htmlspecialchars($photo); ?>"
+                                                alt="<?php echo htmlspecialchars($rsvp['activity_title']); ?>"
+                                                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
+                                    </div>
+                                        <div class="flex flex-1 flex-col p-3">
+                                            <h3 class="line-clamp-1 text-base font-semibold transition-colors group-hover:text-[#FF6B35]"
+                                                style="color: var(--text-primary);">
+                                                <?php echo htmlspecialchars($rsvp['activity_title']); ?>
+                                            </h3>
+                                            <div class="mt-1 text-xs" style="color: var(--text-secondary);">
+                                                <?php echo $date_display; ?>
+                                    </div>
+                                    </div>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+                                </div>
+                                
+            <!-- Collections Tab -->
             <div id="tab-collections" class="tab-content <?php echo $active_tab === 'collections' ? '' : 'hidden'; ?>">
-                <?php
+                                    <?php 
                 $saved_venues = get_saved_venues_ctr($user_id);
                 if ($saved_venues === false)
                     $saved_venues = [];
+                
+                $saved_activities = get_saved_activities_ctr($user_id);
+                if ($saved_activities === false)
+                    $saved_activities = [];
                 ?>
 
-                <?php if (empty($saved_venues)): ?>
+                <?php if (empty($saved_venues) && empty($saved_activities)): ?>
                     <div class="flex flex-col items-center justify-center py-12 text-center">
                         <div class="mb-4 rounded-full bg-[#1a1a1a] p-4">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#9b9ba1]" viewBox="0 0 24 24"
@@ -529,14 +661,15 @@ function time_ago($datetime) {
                             </svg>
                         </div>
                         <h3 class="mb-1 font-semibold text-white">No collections yet</h3>
-                        <p class="mb-4 text-sm text-[#9b9ba1]">Save venues to collections to organize your favorites</p>
+                        <p class="mb-4 text-sm text-[#9b9ba1]">Save venues and activities to collections to organize your favorites</p>
                         <a href="search.php"
                             class="inline-flex items-center justify-center rounded-lg bg-[#FF6B35] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#ff8c66]">
-                            Discover Venues
+                            Discover Venues & Activities
                         </a>
-                            </div>
+                                </div>
                         <?php else: ?>
                     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <!-- Saved Venues -->
                         <?php foreach ($saved_venues as $venue):
                             $photos = json_decode($venue['photos_json'] ?? '[]', true);
                             $photo = $photos[0] ?? 'images/portfolio/01.jpg';
@@ -562,7 +695,7 @@ function time_ago($datetime) {
                                             stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
                                         </svg>
-                                    </div>
+                            </div>
                                 </div>
                                 <div class="flex flex-1 flex-col p-3">
                                     <div class="mb-1 flex items-center gap-2 text-xs text-[#9b9ba1]">
@@ -591,10 +724,71 @@ function time_ago($datetime) {
                                 </div>
                             </a>
                             <?php endforeach; ?>
+                        <!-- Saved Activities -->
+                        <?php foreach ($saved_activities as $activity):
+                            $photos = json_decode($activity['photos_json'] ?? '[]', true);
+                            $photo = !empty($photos) ? $photos[0] : 'images/portfolio/01.jpg';
+                            if (strpos($photo, '../') === 0) {
+                                $photo = substr($photo, 3);
+                            }
+                            if (strpos($photo, 'uploads/') === 0) {
+                                $photo = '../' . $photo;
+                            } elseif (strpos($photo, 'images/') === 0) {
+                                $photo = '../' . $photo;
+                            }
+                            $date_display = !empty($activity['start_at']) ? date('M j, Y', strtotime($activity['start_at'])) : '';
+                            $price_display = isset($activity['is_free']) && $activity['is_free'] ? 'FREE' : 'GH₵' . number_format($activity['price_min'] ?? 0, 0);
+                            ?>
+                            <a href="activity_detail.php?id=<?php echo $activity['activity_id']; ?>"
+                                class="group relative flex flex-col overflow-hidden rounded-xl bg-[#1a1a1a] transition-all hover:shadow-lg">
+                                <div class="relative aspect-[4/3] overflow-hidden bg-[#27272a]">
+                                    <img src="<?php echo htmlspecialchars($photo); ?>"
+                                        alt="<?php echo htmlspecialchars($activity['title']); ?>"
+                                        class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
+                                    <div class="absolute right-2 top-2 rounded-full bg-black/50 p-1.5 backdrop-blur-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[#FF6B35]"
+                                            viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+                                        </svg>
+                                    </div>
+                                    <?php if ($date_display): ?>
+                                        <span class="absolute bottom-2 left-2 rounded border backdrop-blur-sm px-2 py-1 text-xs bg-black/50 text-white">
+                                            <?php echo $date_display; ?>
+                                        </span>
+                        <?php endif; ?>
                     </div>
-                <?php endif; ?>
-                        </div>
-                        
+                                <div class="flex flex-1 flex-col p-3">
+                                    <div class="mb-1 flex items-center gap-2 text-xs text-[#9b9ba1]">
+                                        <span class="font-medium text-white/80">Activity</span>
+                                        <?php if (!empty($activity['location_text'])): ?>
+                                            <span>•</span>
+                                            <span class="flex items-center gap-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24"
+                                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                    stroke-linejoin="round">
+                                                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                                                    <circle cx="12" cy="10" r="3" />
+                                                </svg>
+                                                <?php echo htmlspecialchars($activity['location_text']); ?>
+                                            </span>
+                                        <?php endif; ?>
+                            </div>
+                                    <h3 class="mb-1 line-clamp-1 text-base font-semibold text-white transition-colors group-hover:text-[#FF6B35]">
+                                        <?php echo htmlspecialchars($activity['title']); ?>
+                                    </h3>
+                                    <div class="mt-auto flex items-end justify-between pt-2">
+                                    <div>
+                                            <span class="text-lg font-bold text-white"><?php echo $price_display; ?></span>
+                                    </div>
+                                </div>
+                            </div>
+                            </a>
+                            <?php endforeach; ?>
+                    </div>
+                        <?php endif; ?>
+                    </div>
+
             <!-- Posts Tab (Placeholder) -->
             <div id="tab-posts" class="tab-content <?php echo $active_tab === 'posts' ? '' : 'hidden'; ?>">
                 <div class="flex flex-col items-center justify-center py-12 text-center">
@@ -606,11 +800,11 @@ function time_ago($datetime) {
                             <circle cx="8.5" cy="8.5" r="1.5" />
                             <polyline points="21 15 16 10 5 21" />
                         </svg>
-                    </div>
+                        </div>
                     <h3 class="mb-1 font-semibold text-white">No posts yet</h3>
                     <p class="mb-4 text-sm text-[#9b9ba1]">Share your experiences and photos from venues</p>
-                </div>
-            </div>
+                        </div>
+                    </div>
 
             <!-- Notifications Tab -->
             <div id="tab-notifications" class="tab-content <?php echo $active_tab === 'notifications' ? '' : 'hidden'; ?>">
@@ -637,10 +831,10 @@ function time_ago($datetime) {
                                     <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
                                     <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                                 </svg>
-                            </div>
+            </div>
                             <h3 class="mb-1 font-semibold" style="color: var(--text-primary);">No notifications yet</h3>
                             <p class="mb-4 text-sm" style="color: var(--text-secondary);">You'll see notifications about bookings, reviews, and more here</p>
-                        </div>
+        </div>
                     <?php else: ?>
                         <?php foreach ($notifications as $notif): 
                             // Get icon based on notification type
@@ -689,7 +883,7 @@ function time_ago($datetime) {
                                         stroke="<?php echo $icon_color; ?>" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <?php echo $icon_svg; ?>
                                     </svg>
-                                </div>
+    </div>
                                 
                                 <!-- Content -->
                                 <div class="flex-1">
@@ -699,7 +893,7 @@ function time_ago($datetime) {
                                             <?php if ($is_unread): ?>
                                                 <span class="ml-2 inline-block h-2 w-2 rounded-full" style="background-color: var(--accent);"></span>
                                             <?php endif; ?>
-                                        </h3>
+            </h3>
                                         <span class="text-xs" style="color: var(--text-muted);">
                                             <?php echo time_ago($notif['created_at']); ?>
                                         </span>
@@ -743,8 +937,8 @@ function time_ago($datetime) {
             </div>
             <p class="text-center text-sm text-[#9b9ba1]" id="qrBookingId"></p>
         </div>
-    </div>
-
+        </div>
+        
 <!-- Edit Profile Modal -->
     <div id="editProfileModal"
         class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm">
@@ -897,6 +1091,31 @@ function showTab(tabName) {
                     }
                 },
                 <?php endforeach; ?>
+                <?php 
+                // Add RSVPs to calendar
+                foreach ($user_rsvps as $rsvp): 
+                    if (empty($rsvp['start_at'])) continue;
+                    $start_datetime = date('Y-m-d\TH:i:s', strtotime($rsvp['start_at']));
+                    $end_datetime = !empty($rsvp['end_at']) ? date('Y-m-d\TH:i:s', strtotime($rsvp['end_at'])) : date('Y-m-d\TH:i:s', strtotime($rsvp['start_at'] . ' +2 hours'));
+                    $rsvp_color = $rsvp['status'] === 'going' ? '#FF6B35' : '#9b9ba1';
+                ?>
+                {
+                    id: 'rsvp_<?php echo $rsvp['rsvp_id']; ?>',
+                    title: '<?php echo addslashes($rsvp['activity_title']); ?>',
+                    start: '<?php echo $start_datetime; ?>',
+                    end: '<?php echo $end_datetime; ?>',
+                    backgroundColor: '<?php echo $rsvp_color; ?>',
+                    borderColor: '<?php echo $rsvp_color; ?>',
+                    textColor: '#ffffff',
+                    extendedProps: {
+                        rsvpId: <?php echo $rsvp['rsvp_id']; ?>,
+                        activityId: <?php echo $rsvp['activity_id']; ?>,
+                        status: '<?php echo $rsvp['status']; ?>',
+                        guestCount: <?php echo $rsvp['guest_count']; ?>,
+                        type: 'rsvp'
+                    }
+                },
+                <?php endforeach; ?>
             ];
 
             calendarInstance = new FullCalendar.Calendar(calendarEl, {
@@ -908,18 +1127,31 @@ function showTab(tabName) {
                 },
                 events: bookingsData,
                 eventClick: function(info) {
-                    // Navigate to booking detail or show modal
-                    window.location.href = 'booking_confirmation.php?booking_id=' + info.event.extendedProps.bookingId;
+                    // Navigate to booking detail or activity detail
+                    if (info.event.extendedProps.type === 'rsvp') {
+                        window.location.href = 'activity_detail.php?id=' + info.event.extendedProps.activityId;
+                    } else {
+                        window.location.href = 'booking_confirmation.php?booking_id=' + info.event.extendedProps.bookingId;
+                    }
                 },
                 eventContent: function(arg) {
                     // Custom event rendering
-                    const status = arg.event.extendedProps.status;
-                    const statusBadge = status === 'confirmed' ? '✓' : status === 'requested' ? '⏳' : status === 'cancelled' ? '✕' : '✓';
-                    return {
-                        html: '<div style="padding: 2px 4px; font-size: 11px; font-weight: 500;">' + 
-                              statusBadge + ' ' + arg.event.title + 
-                              '</div>'
-                    };
+                    if (arg.event.extendedProps.type === 'rsvp') {
+                        const statusBadge = arg.event.extendedProps.status === 'going' ? '✓' : '★';
+                        return {
+                            html: '<div style="padding: 2px 4px; font-size: 11px; font-weight: 500;">' + 
+                                  statusBadge + ' ' + arg.event.title + 
+                                  '</div>'
+                        };
+                    } else {
+                        const status = arg.event.extendedProps.status;
+                        const statusBadge = status === 'confirmed' ? '✓' : status === 'requested' ? '⏳' : status === 'cancelled' ? '✕' : '✓';
+                        return {
+                            html: '<div style="padding: 2px 4px; font-size: 11px; font-weight: 500;">' + 
+                                  statusBadge + ' ' + arg.event.title + 
+                                  '</div>'
+                        };
+                    }
                 },
                 height: 'auto',
                 themeSystem: 'standard',
@@ -1048,9 +1280,9 @@ function closeEditModal() {
                 error: function () {
             showProfileAlert('An error occurred. Please try again.', 'danger');
                     submitBtn.prop('disabled', false).text('Save Changes');
-                }
-            });
-        });
+        }
+    });
+});
 
         function showProfileAlert(message, type) {
             const alertDiv = $('#profileAlertMessage');

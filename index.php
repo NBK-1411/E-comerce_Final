@@ -276,8 +276,8 @@ if ($happening_soon === false) {
                             </svg>
                         </button>
             </form>
-          </div>
         </div>
+      </div>
     </div>
   </div>
 </section>
@@ -445,14 +445,40 @@ if ($happening_soon === false) {
                             $date_display = date('j M', strtotime($activity['start_at'] ?? $activity['created_at']));
                             $activity_type_display = ucfirst(str_replace('_', ' ', $activity['activity_type'] ?? 'Activity'));
                             $price_display = $activity['is_free'] ? 'FREE' : 'GH₵' . number_format($activity['price_min'], 0);
-                            ?>
-                            <a href="public/search.php?type=activities&id=<?php echo $activity['activity_id']; ?>"
+                            $is_recurring = isset($activity['recurrence_type']) && $activity['recurrence_type'] === 'recurring';
+      ?>
+                            <a href="public/activity_detail.php?id=<?php echo $activity['activity_id']; ?>"
                                 class="discover-card group relative flex flex-col overflow-hidden rounded-xl bg-card transition-all hover:shadow-lg"
                                 data-activity-type="<?php echo strtolower($activity['activity_type'] ?? 'other'); ?>">
                                 <div class="relative aspect-[4/3] overflow-hidden bg-muted">
                                     <img src="<?php echo htmlspecialchars($photo); ?>"
                                         alt="<?php echo htmlspecialchars($activity['title']); ?>"
                                         class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
+                                    
+                                    <!-- Save Button -->
+                                    <?php
+                                    $is_saved = false;
+                                    if (is_logged_in()) {
+                                        require_once(__DIR__ . '/controllers/customer_controller.php');
+                                        $is_saved = is_activity_saved_ctr(get_user_id(), $activity['activity_id']);
+                                    }
+                                    ?>
+                                    <button
+                                        class="save-activity-btn absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-sm transition-colors"
+                                        style="background-color: var(--bg-primary); opacity: 0.8;"
+                                        onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'"
+                                        data-activity-id="<?php echo $activity['activity_id']; ?>"
+                                        data-saved="<?php echo $is_saved ? 'true' : 'false'; ?>" onclick="event.preventDefault(); event.stopPropagation();">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                            class="h-4 w-4"
+                                            style="color: <?php echo $is_saved ? '#FF6B35' : 'var(--text-primary)'; ?>;"
+                                            viewBox="0 0 24 24" fill="<?php echo $is_saved ? 'currentColor' : 'none'; ?>"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path
+                                                d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z" />
+                                        </svg>
+                                    </button>
+                                    
                                     <span
                                         class="absolute bottom-2 left-2 rounded border border-border bg-background/90 px-2 py-1 text-xs backdrop-blur-sm">
                                         <?php echo $date_display; ?>
@@ -601,7 +627,7 @@ if ($happening_soon === false) {
                             $activity_type_display = ucfirst(str_replace('_', ' ', $event['activity_type'] ?? 'Activity'));
                             $price_display = $event['is_free'] ? 'FREE' : 'GH₵' . number_format($event['price_min'], 0);
                             ?>
-                            <a href="public/search.php?type=activities&id=<?php echo $event['activity_id']; ?>"
+                            <a href="public/activity_detail.php?id=<?php echo $event['activity_id']; ?>"
                                 class="group relative flex w-72 shrink-0 flex-col overflow-hidden rounded-xl bg-card transition-all hover:shadow-lg md:w-auto">
                                 <div class="relative aspect-[4/3] overflow-hidden bg-muted">
                                     <img src="<?php echo htmlspecialchars($photo); ?>"
@@ -848,14 +874,18 @@ if ($happening_soon === false) {
         });
 
 
-        // Save Venue Functionality
+        // Save Venue/Activity Functionality
         document.addEventListener('click', function (e) {
-            const saveBtn = e.target.closest('.save-venue-btn');
+            const saveVenueBtn = e.target.closest('.save-venue-btn');
+            const saveActivityBtn = e.target.closest('.save-activity-btn');
+            const saveBtn = saveVenueBtn || saveActivityBtn;
+            const isActivity = !!saveActivityBtn;
+            
             if (saveBtn) {
                 e.preventDefault();
                 e.stopPropagation(); // Prevent card click
 
-                const venueId = saveBtn.dataset.venueId;
+                const itemId = isActivity ? saveBtn.dataset.activityId : saveBtn.dataset.venueId;
                 const isSaved = saveBtn.dataset.saved === 'true';
                 const action = isSaved ? 'unsave' : 'save';
                 const icon = saveBtn.querySelector('svg');
@@ -872,15 +902,22 @@ if ($happening_soon === false) {
                 }
 
                 // Send request
+                const requestBody = isActivity ? {
+                    activity_id: itemId,
+                    item_type: 'activity',
+                    action: action
+                } : {
+                    venue_id: itemId,
+                    item_type: 'venue',
+                    action: action
+                };
+                
                 fetch('actions/toggle_saved_action.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        venue_id: venueId,
-                        action: action
-                    })
+                    body: JSON.stringify(requestBody)
                 })
                     .then(response => response.json())
                     .then(data => {

@@ -2,6 +2,8 @@
 require_once(__DIR__ . '/../settings/core.php');
 require_once(__DIR__ . '/../settings/db_cred.php');
 require_once(__DIR__ . '/../controllers/activity_controller.php');
+require_once(__DIR__ . '/../controllers/rsvp_controller.php');
+require_once(__DIR__ . '/../controllers/customer_controller.php');
 require_once(__DIR__ . '/../includes/site_nav.php');
 
 $activity_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
@@ -56,6 +58,21 @@ $end_time = !empty($activity['end_at']) ? date('g:i A', strtotime($activity['end
 
 $activity_type_display = ucfirst(str_replace('_', ' ', $activity['activity_type'] ?? 'Activity'));
 $price_display = isset($activity['is_free']) && $activity['is_free'] ? 'FREE' : 'GH₵' . number_format($activity['price_min'] ?? 0, 0);
+$is_recurring = isset($activity['recurrence_type']) && $activity['recurrence_type'] === 'recurring';
+
+// Check if user has RSVP'd
+$user_rsvp = null;
+$is_saved = false;
+if (is_logged_in()) {
+    $user_id = $_SESSION['customer_id'];
+    $user_rsvp = get_rsvp_ctr($activity_id, $user_id);
+    $is_saved = is_activity_saved_ctr($user_id, $activity_id);
+}
+
+// Get RSVP counts
+$rsvp_counts = get_rsvp_counts_ctr($activity_id);
+$going_count = $rsvp_counts['going_count'] ?? 0;
+$interested_count = $rsvp_counts['interested_count'] ?? 0;
 ?>
 <!doctype html>
 <html lang="en">
@@ -156,18 +173,37 @@ $price_display = isset($activity['is_free']) && $activity['is_free'] ? 'FREE' : 
                             <path d="M19 12H5" />
                         </svg>
                     </a>
-                    <button onclick="shareActivity()"
-                        class="flex h-10 w-10 items-center justify-center rounded-full backdrop-blur-sm transition-colors"
-                        style="background-color: var(--bg-primary); opacity: 0.8;"
-                        onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--text-primary);" viewBox="0 0 24 24"
-                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round">
-                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                            <polyline points="16 6 12 2 8 6" />
-                            <line x1="12" y1="2" x2="12" y2="15" />
-                        </svg>
-                    </button>
+                    <div class="flex gap-2">
+                        <?php if (is_logged_in()): ?>
+                            <button onclick="toggleSaveActivity()"
+                                class="flex h-10 w-10 items-center justify-center rounded-full backdrop-blur-sm transition-colors"
+                                style="background-color: var(--bg-primary); opacity: 0.8;"
+                                onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'"
+                                id="saveActivityBtn" data-activity-id="<?php echo $activity_id; ?>" data-saved="<?php echo $is_saved ? 'true' : 'false'; ?>">
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                    class="h-5 w-5"
+                                    style="color: <?php echo $is_saved ? '#FF6B35' : 'var(--text-primary)'; ?>;"
+                                    viewBox="0 0 24 24" fill="<?php echo $is_saved ? 'currentColor' : 'none'; ?>"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                    id="saveActivityIcon">
+                                    <path
+                                        d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z" />
+                                </svg>
+                            </button>
+                        <?php endif; ?>
+                        <button onclick="shareActivity()"
+                            class="flex h-10 w-10 items-center justify-center rounded-full backdrop-blur-sm transition-colors"
+                            style="background-color: var(--bg-primary); opacity: 0.8;"
+                            onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--text-primary);" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                                <polyline points="16 6 12 2 8 6" />
+                                <line x1="12" y1="2" x2="12" y2="15" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
         </div>
         
@@ -201,6 +237,14 @@ $price_display = isset($activity['is_free']) && $activity['is_free'] ? 'FREE' : 
                                 style="border-color: var(--border-color); background-color: var(--bg-card); color: var(--text-primary);">
                                 <?php echo htmlspecialchars($activity_type_display); ?>
                             </span>
+                            <?php if ($is_recurring): ?>
+                                <span class="flex items-center gap-1 rounded border border-blue-500/30 bg-transparent px-2 py-1 text-xs text-blue-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                                    </svg>
+                                    RECURRING
+                                </span>
+                            <?php endif; ?>
                         </div>
                         <h1 class="mb-2 text-2xl font-bold md:text-3xl" style="color: var(--text-primary);">
                             <?php echo htmlspecialchars($activity['title']); ?>
@@ -306,7 +350,11 @@ $price_display = isset($activity['is_free']) && $activity['is_free'] ? 'FREE' : 
                             <div class="mb-4 rounded-lg border p-3" style="border-color: var(--border-color); background-color: var(--bg-secondary);">
                                 <div class="mb-1 text-xs font-medium" style="color: var(--text-secondary);">Date & Time</div>
                                 <div class="font-semibold" style="color: var(--text-primary);">
-                                    <?php echo $start_date; ?>
+                                    <?php if ($is_recurring): ?>
+                                        Next: <?php echo $start_date; ?>
+                                    <?php else: ?>
+                                        <?php echo $start_date; ?>
+                                    <?php endif; ?>
                                 </div>
                                 <?php if ($start_time): ?>
                                     <div class="text-sm" style="color: var(--text-secondary);">
@@ -323,17 +371,67 @@ $price_display = isset($activity['is_free']) && $activity['is_free'] ? 'FREE' : 
                             <div class="mb-4 rounded-lg border p-3" style="border-color: var(--border-color); background-color: var(--bg-secondary);">
                                 <div class="mb-1 text-xs font-medium" style="color: var(--text-secondary);">Capacity</div>
                                 <div class="font-semibold" style="color: var(--text-primary);">
-                                    <?php echo $activity['capacity']; ?> spots available
+                                    <?php 
+                                    $spots_left = $activity['capacity'] - $going_count;
+                                    echo $spots_left > 0 ? $spots_left : 0; 
+                                    ?> spots available
                                 </div>
+                                <?php if ($going_count > 0): ?>
+                                    <div class="mt-1 text-xs" style="color: var(--text-secondary);">
+                                        <?php echo $going_count; ?> going
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
 
-                        <button onclick="alert('RSVP functionality coming soon!')"
-                            class="w-full rounded-lg px-4 py-3 text-center font-semibold transition"
-                            style="background-color: var(--accent); color: #ffffff;"
-                            onmouseover="this.style.backgroundColor='var(--accent-hover)'" onmouseout="this.style.backgroundColor='var(--accent)'">
-                            RSVP Now
-                        </button>
+                        <?php if (is_logged_in()): ?>
+                            <?php if ($user_rsvp): ?>
+                                <div class="mb-4 rounded-lg border p-3" style="border-color: var(--accent); background-color: var(--bg-secondary);">
+                                    <div class="mb-2 flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: var(--accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                            <polyline points="22 4 12 14.01 9 11.01" />
+                                        </svg>
+                                        <span class="font-semibold" style="color: var(--text-primary);">
+                                            You're <?php echo $user_rsvp['status'] === 'going' ? 'going' : 'interested'; ?>!
+                                        </span>
+                                    </div>
+                                    <?php if ($user_rsvp['status'] === 'going' && $user_rsvp['guest_count'] > 1): ?>
+                                        <div class="text-sm" style="color: var(--text-secondary);">
+                                            <?php echo $user_rsvp['guest_count']; ?> guests
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                                <button onclick="cancelRSVP()"
+                                    class="w-full rounded-lg border px-4 py-3 text-center font-semibold transition"
+                                    style="border-color: var(--border-color); background-color: transparent; color: var(--text-primary);"
+                                    onmouseover="this.style.backgroundColor='var(--bg-secondary)'" onmouseout="this.style.backgroundColor='transparent'">
+                                    Cancel RSVP
+                                </button>
+                            <?php else: ?>
+                                <div class="mb-4">
+                                    <label class="mb-2 block text-sm font-medium" style="color: var(--text-primary);">Number of Guests</label>
+                                    <input type="number" id="guestCount" min="1" max="<?php echo isset($activity['capacity']) && $activity['capacity'] > 0 ? $activity['capacity'] : 10; ?>" value="1"
+                                        class="w-full rounded-lg border px-3 py-2 focus:outline-none"
+                                        style="border-color: var(--border-color); background-color: var(--bg-primary); color: var(--text-primary);"
+                                        onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border-color)'">
+                                </div>
+                                <button onclick="rsvpActivity()"
+                                    class="w-full rounded-lg px-4 py-3 text-center font-semibold transition"
+                                    style="background-color: var(--accent); color: #ffffff;"
+                                    onmouseover="this.style.backgroundColor='var(--accent-hover)'" onmouseout="this.style.backgroundColor='var(--accent)'"
+                                    id="rsvpBtn">
+                                    RSVP Now
+                                </button>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <a href="login.php"
+                                class="block w-full rounded-lg px-4 py-3 text-center font-semibold transition"
+                                style="background-color: var(--accent); color: #ffffff;"
+                                onmouseover="this.style.backgroundColor='var(--accent-hover)'" onmouseout="this.style.backgroundColor='var(--accent)'">
+                                Login to RSVP
+                            </a>
+                        <?php endif; ?>
 
                         <div class="mt-4 text-center text-xs" style="color: var(--text-secondary);">
                             Free cancellation up to 24 hours before
@@ -430,6 +528,150 @@ $price_display = isset($activity['is_free']) && $activity['is_free'] ? 'FREE' : 
 
             setTimeout(initActivityMap, 100);
         <?php endif; ?>
+
+        // RSVP functionality
+        const activityId = <?php echo $activity_id; ?>;
+        const hasRSVP = <?php echo $user_rsvp ? 'true' : 'false'; ?>;
+
+        function rsvpActivity() {
+            const guestCount = parseInt(document.getElementById('guestCount').value) || 1;
+            const btn = document.getElementById('rsvpBtn');
+            
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Processing...';
+            }
+
+            fetch('../actions/rsvp_action.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    activity_id: activityId,
+                    action: 'rsvp',
+                    status: 'going',
+                    guest_count: guestCount
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); // Reload to show RSVP status
+                } else {
+                    alert(data.message || 'Failed to RSVP. Please try again.');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = 'RSVP Now';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'RSVP Now';
+                }
+            });
+        }
+
+        function cancelRSVP() {
+            if (!confirm('Are you sure you want to cancel your RSVP?')) {
+                return;
+            }
+
+            fetch('../actions/rsvp_action.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    activity_id: activityId,
+                    action: 'cancel'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); // Reload to show updated status
+                } else {
+                    alert(data.message || 'Failed to cancel RSVP. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            });
+        }
+
+        // Save activity functionality
+        function toggleSaveActivity() {
+            const saveBtn = document.getElementById('saveActivityBtn');
+            const icon = document.getElementById('saveActivityIcon');
+            if (!saveBtn || !icon) return;
+
+            const isSaved = saveBtn.dataset.saved === 'true';
+            const action = isSaved ? 'unsave' : 'save';
+
+            // Optimistic UI update
+            if (action === 'save') {
+                saveBtn.dataset.saved = 'true';
+                icon.setAttribute('fill', 'currentColor');
+                icon.style.color = '#FF6B35';
+            } else {
+                saveBtn.dataset.saved = 'false';
+                icon.setAttribute('fill', 'none');
+                icon.style.color = 'var(--text-primary)';
+            }
+
+            // Send request
+            fetch('../actions/toggle_saved_action.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    activity_id: activityId,
+                    item_type: 'activity',
+                    action: action
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'error') {
+                    // Revert UI on error
+                    if (action === 'save') {
+                        saveBtn.dataset.saved = 'false';
+                        icon.setAttribute('fill', 'none');
+                        icon.style.color = 'var(--text-primary)';
+                    } else {
+                        saveBtn.dataset.saved = 'true';
+                        icon.setAttribute('fill', 'currentColor');
+                        icon.style.color = '#FF6B35';
+                    }
+                    
+                    if (data.message.includes('login')) {
+                        window.location.href = 'login.php';
+                    } else {
+                        alert(data.message);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Revert UI on error
+                if (action === 'save') {
+                    saveBtn.dataset.saved = 'false';
+                    icon.setAttribute('fill', 'none');
+                    icon.style.color = 'var(--text-primary)';
+                } else {
+                    saveBtn.dataset.saved = 'true';
+                    icon.setAttribute('fill', 'currentColor');
+                    icon.style.color = '#FF6B35';
+                }
+            });
+        }
     </script>
 </body>
 

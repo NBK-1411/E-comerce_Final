@@ -136,4 +136,28 @@ function get_saved_venues_ctr($customer_id)
     return $customer->get_saved_venues($customer_id);
 }
 
+function save_activity_ctr($customer_id, $activity_id)
+{
+    $customer = new Customer();
+    return $customer->save_activity($customer_id, $activity_id);
+}
+
+function unsave_activity_ctr($customer_id, $activity_id)
+{
+    $customer = new Customer();
+    return $customer->unsave_activity($customer_id, $activity_id);
+}
+
+function is_activity_saved_ctr($customer_id, $activity_id)
+{
+    $customer = new Customer();
+    return $customer->is_activity_saved($customer_id, $activity_id);
+}
+
+function get_saved_activities_ctr($customer_id)
+{
+    $customer = new Customer();
+    return $customer->get_saved_activities($customer_id);
+}
+
 ?>

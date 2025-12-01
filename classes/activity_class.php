@@ -77,6 +77,20 @@ class Activity extends db_connection {
             $types .= 'd';
         }
         
+        // Filter by recurrence type
+        if (!empty($filters['recurrence_type'])) {
+            $sql .= " AND a.recurrence_type = ?";
+            $params[] = $filters['recurrence_type'];
+            $types .= 's';
+        }
+        
+        // For recurring activities, show them even if start date has passed
+        // For one-time activities, only show if start date is in the future
+        if (empty($filters['recurrence_type']) || $filters['recurrence_type'] === 'none') {
+            // Only show upcoming one-time activities
+            $sql .= " AND (a.recurrence_type = 'recurring' OR a.start_at >= NOW())";
+        }
+        
         $sql .= " ORDER BY a.start_at ASC";
         
         return empty($params) ? $this->read($sql) : $this->read($sql, $params, $types);
@@ -95,6 +109,49 @@ class Activity extends db_connection {
         
         $result = $this->read($sql, [$activity_id], 'i');
         return $result ? $result[0] : false;
+    }
+    
+    /**
+     * Create new activity
+     */
+    public function create_activity($data) {
+        $sql = "INSERT INTO activities (title, description, activity_type, recurrence_type, host_id, venue_id, location_text, gps_code, 
+                start_at, end_at, capacity, price_min, price_max, is_free, photos_json, status) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        $params = [
+            $data['title'],
+            $data['description'],
+            $data['activity_type'],
+            $data['recurrence_type'] ?? 'none',
+            $data['host_id'],
+            $data['venue_id'] ?? null,
+            $data['location_text'],
+            $data['gps_code'] ?? '',
+            $data['start_at'],
+            $data['end_at'] ?? null,
+            $data['capacity'] ?? null,
+            $data['price_min'] ?? 0.00,
+            $data['price_max'] ?? 0.00,
+            $data['is_free'] ?? 0,
+            $data['photos_json'] ?? json_encode([]),
+            $data['status'] ?? 'pending'
+        ];
+        
+        return $this->write($sql, $params, 'ssssississddiisi');
+    }
+    
+    /**
+     * Get activities by host
+     */
+    public function get_activities_by_host($host_id) {
+        $sql = "SELECT a.*, v.title as venue_title
+                FROM activities a
+                LEFT JOIN venue v ON a.venue_id = v.venue_id
+                WHERE a.host_id = ?
+                ORDER BY a.created_at DESC";
+        
+        return $this->read($sql, [$host_id], 'i');
     }
 }
 

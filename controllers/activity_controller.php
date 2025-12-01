@@ -37,5 +37,21 @@ function get_activity_by_id_ctr($activity_id) {
     return $activity->get_activity_by_id($activity_id);
 }
 
+/**
+ * Create new activity
+ */
+function create_activity_ctr($data) {
+    $activity = new Activity();
+    return $activity->create_activity($data);
+}
+
+/**
+ * Get activities by host
+ */
+function get_activities_by_host_ctr($host_id) {
+    $activity = new Activity();
+    return $activity->get_activities_by_host($host_id);
+}
+
 ?>
 

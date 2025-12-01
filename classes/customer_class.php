@@ -185,6 +185,66 @@ class Customer extends db_connection {
                 ORDER BY ci.added_at DESC";
         return $this->read($sql, [$customer_id], 'i');
     }
+
+    /**
+     * Save an activity to user's default collection
+     */
+    public function save_activity($customer_id, $activity_id) {
+        // Get or create default collection
+        $collection_id = $this->get_or_create_default_collection($customer_id);
+        
+        if (!$collection_id) {
+            return false;
+        }
+        
+        // Check if already in collection
+        $check_sql = "SELECT item_id FROM collection_items 
+                     WHERE collection_id = ? AND item_type = 'activity' AND item_reference_id = ?";
+        $exists = $this->read($check_sql, [$collection_id, $activity_id], 'ii');
+        
+        if ($exists && !empty($exists)) {
+            return true; // Already saved
+        }
+        
+        // Add to collection
+        $sql = "INSERT INTO collection_items (collection_id, item_type, item_reference_id) VALUES (?, 'activity', ?)";
+        return $this->write($sql, [$collection_id, $activity_id], 'ii');
+    }
+
+    /**
+     * Unsave an activity (remove from all user's collections)
+     */
+    public function unsave_activity($customer_id, $activity_id) {
+        $sql = "DELETE ci FROM collection_items ci
+                INNER JOIN collections c ON ci.collection_id = c.collection_id
+                WHERE c.owner_id = ? AND ci.item_type = 'activity' AND ci.item_reference_id = ?";
+        return $this->write($sql, [$customer_id, $activity_id], 'ii');
+    }
+
+    /**
+     * Check if activity is saved in any of user's collections
+     */
+    public function is_activity_saved($customer_id, $activity_id) {
+        $sql = "SELECT ci.item_id FROM collection_items ci
+                INNER JOIN collections c ON ci.collection_id = c.collection_id
+                WHERE c.owner_id = ? AND ci.item_type = 'activity' AND ci.item_reference_id = ?
+                LIMIT 1";
+        $result = $this->read($sql, [$customer_id, $activity_id], 'ii');
+        return $result && !empty($result) ? true : false;
+    }
+
+    /**
+     * Get all saved activities for a customer (from all their collections)
+     */
+    public function get_saved_activities($customer_id) {
+        $sql = "SELECT DISTINCT a.*, ci.added_at as saved_at 
+                FROM collection_items ci
+                INNER JOIN collections col ON ci.collection_id = col.collection_id
+                INNER JOIN activities a ON ci.item_reference_id = a.activity_id
+                WHERE col.owner_id = ? AND ci.item_type = 'activity'
+                ORDER BY ci.added_at DESC";
+        return $this->read($sql, [$customer_id], 'i');
+    }
 }
 
 ?>

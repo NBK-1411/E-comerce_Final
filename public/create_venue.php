@@ -96,7 +96,7 @@ $customer_name = $_SESSION['customer_name'];
                     <div>
                         <h1 class="text-lg font-semibold" style="color: var(--foreground);">List Your Venue</h1>
                         <p class="text-xs" style="color: var(--muted);" id="stepIndicator">Step <span id="currentStep">1</span> of
-                            <span id="totalSteps">4</span></p>
+                            <span id="totalSteps">5</span></p>
                     </div>
                 </div>
                 <a href="owner_dashboard.php"
@@ -117,6 +117,7 @@ $customer_name = $_SESSION['customer_name'];
                     <div class="ml-1 h-1 flex-1" id="progress-2" style="background-color: var(--border);"></div>
                     <div class="ml-1 h-1 flex-1" id="progress-3" style="background-color: var(--border);"></div>
                     <div class="ml-1 h-1 flex-1" id="progress-4" style="background-color: var(--border);"></div>
+                    <div class="ml-1 h-1 flex-1" id="progress-5" style="background-color: var(--border);"></div>
                 </div>
     </div>
 </div>
@@ -407,8 +408,41 @@ $customer_name = $_SESSION['customer_name'];
                     </div>
                 </div>
 
-                <!-- Step 4: Photos & Review -->
+                <!-- Step 4: Contact Information -->
                 <div id="step-4" class="step-content hidden">
+                    <div class="space-y-6">
+                        <div class="rounded-xl border p-6 shadow-sm"
+                            style="border-color: var(--border); background-color: var(--card);">
+                            <div class="mb-6">
+                                <h3 class="text-lg font-semibold" style="color: var(--foreground);">Contact Information</h3>
+                                <p class="text-sm" style="color: var(--muted);">How can guests reach you about this venue?</p>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="mb-2 block text-sm font-medium" style="color: var(--foreground);">Contact Phone *</label>
+                                    <input type="tel" name="contact_phone" id="contactPhone" required
+                                        class="flex h-10 w-full rounded-lg border px-3 py-2 text-sm focus:border-[#FF6B35] focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20"
+                                        style="border-color: var(--border); background-color: var(--background); color: var(--foreground);"
+                                        placeholder="+233 XX XXX XXXX">
+                                    <p class="mt-1 text-xs" style="color: var(--muted);">Include country code (e.g., +233 for Ghana)</p>
+                                </div>
+                                
+                                <div>
+                                    <label class="mb-2 block text-sm font-medium" style="color: var(--foreground);">Contact Email (Optional)</label>
+                                    <input type="email" name="contact_email" id="contactEmail"
+                                        class="flex h-10 w-full rounded-lg border px-3 py-2 text-sm focus:border-[#FF6B35] focus:outline-none focus:ring-2 focus:ring-[#FF6B35]/20"
+                                        style="border-color: var(--border); background-color: var(--background); color: var(--foreground);"
+                                        placeholder="venue@example.com">
+                                    <p class="mt-1 text-xs" style="color: var(--muted);">Email address for booking inquiries</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 5: Photos & Review -->
+                <div id="step-5" class="step-content hidden">
                     <div class="space-y-6">
                         <div class="rounded-xl border p-6 shadow-sm"
                             style="border-color: var(--border); background-color: var(--card);">
@@ -508,11 +542,6 @@ $customer_name = $_SESSION['customer_name'];
                     </div>
                 </div>
 
-                <!-- Contact Information (Hidden, included in form) -->
-                <div class="hidden">
-                    <input type="tel" name="contact_phone" id="contactPhone" placeholder="+233 XX XXX XXXX">
-                    <input type="email" name="contact_email" id="contactEmail" placeholder="venue@example.com">
-            </div>
 
                 <!-- Navigation Buttons -->
                 <div class="mt-8 flex justify-between">
@@ -552,7 +581,7 @@ $customer_name = $_SESSION['customer_name'];
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
         let currentStep = 1;
-        const totalSteps = 4;
+        const totalSteps = 5;
 
         // Update step indicator and progress bar
         function updateStepIndicator() {
@@ -626,8 +655,8 @@ $customer_name = $_SESSION['customer_name'];
                 nextBtn.onmouseout = function() { this.style.backgroundColor = 'var(--accent)'; };
             }
 
-            // Update review section if on step 4
-            if (currentStep === 4) {
+            // Update review section if on step 5
+            if (currentStep === 5) {
                 updateReviewSection();
             }
         }
@@ -647,6 +676,11 @@ $customer_name = $_SESSION['customer_name'];
             } else if (currentStep === 3) {
                 if (!document.getElementById('venuePrice').value) {
                     showAlert('Please set a price', 'danger');
+                    return;
+                }
+            } else if (currentStep === 4) {
+                if (!document.getElementById('contactPhone').value) {
+                    showAlert('Please provide a contact phone number', 'danger');
                     return;
                 }
             }

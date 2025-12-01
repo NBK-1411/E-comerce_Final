@@ -37,6 +37,12 @@ $date_param = isset($_GET['date']) ? '&date=' . urlencode($_GET['date']) : '';
 $guests_param = isset($_GET['guests']) ? '&guests=' . urlencode($_GET['guests']) : '';
 $url_params = $date_param . $guests_param;
 
+// Get recurrence filter if set
+$recurrence_filter = isset($_GET['recurrence']) ? trim($_GET['recurrence']) : '';
+if (!empty($recurrence_filter) && in_array($recurrence_filter, ['none', 'recurring'])) {
+    $filters['recurrence_type'] = $recurrence_filter;
+}
+
 // Get results based on type
 $results = [];
 if ($type === 'activity') {
@@ -243,6 +249,33 @@ if ($type === 'activity') {
                             </div>
                         </div>
 
+            <!-- Recurrence Filter (Activities only) -->
+            <?php if ($type === 'activity'): ?>
+                <div class="mb-4 flex gap-2">
+                    <a href="?type=activity<?php echo !empty($search_query) ? '&q=' . urlencode($search_query) : ''; ?>"
+                        class="rounded-lg border px-3 py-1.5 text-sm font-medium transition <?php echo empty($recurrence_filter) ? 'shadow-sm' : ''; ?>"
+                        style="<?php echo empty($recurrence_filter) ? 'background-color: var(--bg-primary); color: var(--text-primary); border-color: var(--accent);' : 'background-color: var(--bg-card); color: var(--text-secondary); border-color: var(--border-color);'; ?>"
+                        onmouseover="<?php echo !empty($recurrence_filter) ? "this.style.color='var(--text-primary)'" : ''; ?>"
+                        onmouseout="<?php echo !empty($recurrence_filter) ? "this.style.color='var(--text-secondary)'" : ''; ?>">
+                        All Activities
+                    </a>
+                    <a href="?type=activity&recurrence=recurring<?php echo !empty($search_query) ? '&q=' . urlencode($search_query) : ''; ?>"
+                        class="rounded-lg border px-3 py-1.5 text-sm font-medium transition <?php echo $recurrence_filter === 'recurring' ? 'shadow-sm' : ''; ?>"
+                        style="<?php echo $recurrence_filter === 'recurring' ? 'background-color: var(--bg-primary); color: var(--text-primary); border-color: var(--accent);' : 'background-color: var(--bg-card); color: var(--text-secondary); border-color: var(--border-color);'; ?>"
+                        onmouseover="<?php echo $recurrence_filter !== 'recurring' ? "this.style.color='var(--text-primary)'" : ''; ?>"
+                        onmouseout="<?php echo $recurrence_filter !== 'recurring' ? "this.style.color='var(--text-secondary)'" : ''; ?>">
+                        Recurring Only
+                    </a>
+                    <a href="?type=activity&recurrence=none<?php echo !empty($search_query) ? '&q=' . urlencode($search_query) : ''; ?>"
+                        class="rounded-lg border px-3 py-1.5 text-sm font-medium transition <?php echo $recurrence_filter === 'none' ? 'shadow-sm' : ''; ?>"
+                        style="<?php echo $recurrence_filter === 'none' ? 'background-color: var(--bg-primary); color: var(--text-primary); border-color: var(--accent);' : 'background-color: var(--bg-card); color: var(--text-secondary); border-color: var(--border-color);'; ?>"
+                        onmouseover="<?php echo $recurrence_filter !== 'none' ? "this.style.color='var(--text-primary)'" : ''; ?>"
+                        onmouseout="<?php echo $recurrence_filter !== 'none' ? "this.style.color='var(--text-secondary)'" : ''; ?>">
+                        One-Time Only
+                    </a>
+                </div>
+            <?php endif; ?>
+
             <!-- Category Pills -->
             <div class="relative mb-4">
                 <div class="scrollbar-hide flex gap-2 overflow-x-auto px-1 py-2 md:px-8" id="categoryPills">
@@ -322,6 +355,7 @@ if ($type === 'activity') {
                                 $date_display = !empty($activity['start_at']) ? date('j M', strtotime($activity['start_at'])) : '';
                                 $activity_type_display = ucfirst(str_replace('_', ' ', $activity['activity_type'] ?? 'Activity'));
                                 $price_display = isset($activity['is_free']) && $activity['is_free'] ? 'FREE' : 'GH₵' . number_format($activity['price_min'] ?? 0, 0);
+                                $is_recurring = isset($activity['recurrence_type']) && $activity['recurrence_type'] === 'recurring';
                             ?>
                             <a href="activity_detail.php?id=<?php echo $activity['activity_id']; ?>"
                                 data-activity-type="<?php echo strtolower($activity['activity_type'] ?? 'other'); ?>"
@@ -332,6 +366,30 @@ if ($type === 'activity') {
                                     <img src="<?php echo htmlspecialchars($first_photo); ?>"
                                         alt="<?php echo htmlspecialchars($activity['title']); ?>"
                                         class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
+                                    
+                                    <!-- Save Button -->
+                                    <?php
+                                    $is_saved = false;
+                                    if (is_logged_in()) {
+                                        require_once(__DIR__ . '/../controllers/customer_controller.php');
+                                        $is_saved = is_activity_saved_ctr(get_user_id(), $activity['activity_id']);
+                                    }
+                                    ?>
+                                    <button
+                                        class="save-activity-btn absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-sm transition-colors"
+                                        style="background-color: var(--bg-primary); opacity: 0.8;"
+                                        onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'"
+                                        data-activity-id="<?php echo $activity['activity_id']; ?>"
+                                        data-saved="<?php echo $is_saved ? 'true' : 'false'; ?>" onclick="event.preventDefault();">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                            class="h-4 w-4"
+                                            style="color: <?php echo $is_saved ? '#FF6B35' : 'var(--text-primary)'; ?>;"
+                                            viewBox="0 0 24 24" fill="<?php echo $is_saved ? 'currentColor' : 'none'; ?>"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path
+                                                d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z" />
+                                        </svg>
+                                    </button>
                                     
                                     <?php if ($date_display): ?>
                                         <span class="absolute bottom-2 left-2 rounded border backdrop-blur-sm px-2 py-1 text-xs"
@@ -346,6 +404,14 @@ if ($type === 'activity') {
                                     <!-- Activity Type & Location -->
                                     <div class="mb-1 flex items-center gap-2 text-xs" style="color: var(--text-secondary);">
                                         <span class="font-medium" style="color: var(--text-secondary); opacity: 0.8;"><?php echo htmlspecialchars($activity_type_display); ?></span>
+                                        <?php if ($is_recurring): ?>
+                                            <span class="flex items-center gap-1 rounded border border-blue-500/30 bg-transparent px-1.5 py-0.5 text-[10px] text-blue-400">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                                                </svg>
+                                                RECURRING
+                                            </span>
+                                        <?php endif; ?>
                                         <span>•</span>
                                         <span class="flex items-center gap-1">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none"
@@ -715,14 +781,18 @@ if ($type === 'activity') {
             });
         });
 
-        // Save Venue Functionality
+        // Save Venue/Activity Functionality
         document.addEventListener('click', function(e) {
-            const saveBtn = e.target.closest('.save-venue-btn');
+            const saveVenueBtn = e.target.closest('.save-venue-btn');
+            const saveActivityBtn = e.target.closest('.save-activity-btn');
+            const saveBtn = saveVenueBtn || saveActivityBtn;
+            const isActivity = !!saveActivityBtn;
+            
             if (saveBtn) {
                 e.preventDefault();
                 e.stopPropagation(); // Prevent card click
 
-                const venueId = saveBtn.dataset.venueId;
+                const itemId = isActivity ? saveBtn.dataset.activityId : saveBtn.dataset.venueId;
                 const isSaved = saveBtn.dataset.saved === 'true';
                 const action = isSaved ? 'unsave' : 'save';
                 const icon = saveBtn.querySelector('svg');
@@ -739,15 +809,22 @@ if ($type === 'activity') {
                 }
 
                 // Send request
+                const requestBody = isActivity ? {
+                    activity_id: itemId,
+                    item_type: 'activity',
+                    action: action
+                } : {
+                    venue_id: itemId,
+                    item_type: 'venue',
+                    action: action
+                };
+                
                 fetch('../actions/toggle_saved_action.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        venue_id: venueId,
-                        action: action
-                    })
+                    body: JSON.stringify(requestBody)
                 })
                 .then(response => response.json())
                 .then(data => {

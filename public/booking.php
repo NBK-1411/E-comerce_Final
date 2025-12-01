@@ -74,7 +74,7 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
 <style>
         * {
             font-family: 'Inter', 'Segoe UI', sans-serif;
-        }
+}
 
         :root {
             /* Dark theme (default) */
@@ -87,7 +87,7 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
             --border-color: rgba(39, 39, 42, 0.7);
             --accent: #FF6B35;
             --accent-hover: #ff8c66;
-        }
+}
 
         [data-theme="light"] {
             /* Light theme */
@@ -98,7 +98,7 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
             --text-secondary: #525252;
             --text-muted: #737373;
             --border-color: rgba(229, 229, 229, 0.8);
-        }
+}
 
         body {
             background-color: var(--bg-primary);
@@ -137,10 +137,10 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
                                 1
                             </div>
                             <div id="step1Line" class="flex-1 h-1 mx-2 rounded-full" style="background-color: rgba(39,39,42,0.7);"></div>
-                        </div>
+    </div>
                         <span class="mt-2 text-xs text-center" style="color: var(--text-secondary);">Details</span>
-                    </div>
-                    
+</div>
+
                     <!-- Step 2 -->
                     <div class="flex flex-col items-center flex-1">
                         <div class="flex items-center w-full">
@@ -153,7 +153,7 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
                         </div>
                         <span class="mt-2 text-xs text-center" style="color: var(--text-secondary);">Payment</span>
                     </div>
-                    
+
                     <!-- Step 3 -->
                     <div class="flex flex-col items-center flex-1">
                         <div class="flex items-center w-full">
@@ -303,7 +303,7 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
                                         </svg>
                                     </div>
                                 </button>
-                            </div>
+                        </div>
 
                             <!-- Escrow Notice -->
                             <div class="rounded-lg border p-4"
@@ -321,7 +321,7 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
                                             Your payment is held securely until the host confirms your booking. Full refund
                                             if not confirmed within 24 hours.
                                         </p>
-                                    </div>
+                                </div>
                                 </div>
                             </div>
 
@@ -340,10 +340,10 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
                                     onmouseover="this.style.backgroundColor='var(--accent-hover)'"
                                     onmouseout="this.style.backgroundColor='var(--accent)'">
                                     Review Booking
-                                </button>
+                        </button>
                             </div>
-                        </div>
-                    </div>
+                </div>
+            </div>
 
                     <!-- Step 3: Confirm -->
                     <div id="stepConfirm" class="step-content hidden space-y-6">
@@ -433,7 +433,7 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
                                     <span class="break-words"><?php echo htmlspecialchars($venue['location_text']); ?></span>
                                 </div>
                             </div>
-                        </div>
+                    </div>
 
                         <hr class="my-5" style="border-color: var(--border-color);">
 
@@ -453,7 +453,7 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
                                 <span class="flex-shrink-0 text-nowrap" style="color: var(--text-secondary);">Service fee</span>
                                 <span class="font-medium text-right whitespace-nowrap flex-shrink-0" style="color: var(--text-primary);">GH₵<span id="serviceFeeDisplay">0.00</span></span>
                             </div>
-                        </div>
+                    </div>
 
                         <hr class="my-5" style="border-color: var(--border-color);">
 
@@ -565,7 +565,7 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
                         lineEl.className = 'flex-1 h-1 mx-2 rounded-full';
                         lineEl.style.backgroundColor = 'rgba(39,39,42,0.7)';
                     }
-                } else {
+    } else {
                     stepEl.className = 'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium shrink-0';
                     stepEl.style.backgroundColor = 'var(--bg-card)';
                     stepEl.style.color = 'var(--text-secondary)';
@@ -573,7 +573,7 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
                     if (lineEl) {
                         lineEl.className = 'flex-1 h-1 mx-2 rounded-full';
                         lineEl.style.backgroundColor = 'rgba(39,39,42,0.7)';
-                    }
+    }
                 }
             }
 
@@ -629,7 +629,7 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
         const start = new Date('2000-01-01 ' + startTime);
         const end = new Date('2000-01-01 ' + endTime);
                 const hours = (end - start) / (1000 * 60 * 60);
-
+        
                 if (hours > 0) {
                     const totalBase = basePrice * hours;
                     const deposit = Math.round(totalBase * (depositPercent / 100));
@@ -651,9 +651,9 @@ $cancellation_info = $cancellation_labels[$cancellation_policy] ?? $cancellation
                     }
 
                     document.getElementById('continueToPayment').disabled = false;
-                }
-            }
         }
+    }
+}
 
         function updateBookingSummary() {
             const date = new Date(document.getElementById('bookingDate').value);
