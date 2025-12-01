@@ -82,11 +82,36 @@ if (!$payment_id) {
     exit();
 }
 
-// Build callback URL
-$protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
-$host = $_SERVER['HTTP_HOST'];
-$script_dir = dirname(dirname($_SERVER['SCRIPT_NAME']));
-$callback_url_final = !empty($callback_url) ? $callback_url : $protocol . '://' . $host . $script_dir . '/actions/payment_verify_paystack_action.php';
+// Build callback URL - use a more reliable method that works on live servers
+function build_base_url() {
+    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'];
+    
+    // Get the script directory relative to document root
+    $script_path = str_replace('\\', '/', dirname(__FILE__));
+    $doc_root = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT']);
+    
+    // Normalize paths (remove trailing slashes for comparison)
+    $script_path = rtrim($script_path, '/');
+    $doc_root = rtrim($doc_root, '/');
+    
+    // Calculate the relative path from document root
+    $relative_path = str_replace($doc_root, '', $script_path);
+    
+    // Remove /actions since we're in actions folder
+    $relative_path = str_replace('/actions', '', $relative_path);
+    $relative_path = rtrim($relative_path, '/');
+    
+    // Build base URL
+    $base_url = $protocol . '://' . $host;
+    if (!empty($relative_path)) {
+        $base_url .= '/' . ltrim($relative_path, '/');
+    }
+    
+    return $base_url;
+}
+
+$callback_url_final = !empty($callback_url) ? $callback_url : build_base_url() . '/actions/payment_verify_paystack_action.php';
 
 // Initialize Paystack transaction
 $paystack_data = [

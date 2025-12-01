@@ -9,12 +9,37 @@ require_once(__DIR__ . '/../settings/db_cred.php');
 require_once(__DIR__ . '/../controllers/payment_controller.php');
 require_once(__DIR__ . '/../controllers/booking_controller.php');
 
-// Helper function to build redirect URL
-function build_redirect_url($path) {
+// Helper function to build redirect URL - use a more reliable method that works on live servers
+function build_base_url() {
     $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'];
-    $script_dir = dirname(dirname($_SERVER['SCRIPT_NAME']));
-    return $protocol . '://' . $host . $script_dir . $path;
+    
+    // Get the script directory relative to document root
+    $script_path = str_replace('\\', '/', dirname(__FILE__));
+    $doc_root = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT']);
+    
+    // Normalize paths (remove trailing slashes for comparison)
+    $script_path = rtrim($script_path, '/');
+    $doc_root = rtrim($doc_root, '/');
+    
+    // Calculate the relative path from document root
+    $relative_path = str_replace($doc_root, '', $script_path);
+    
+    // Remove /actions since we're in actions folder
+    $relative_path = str_replace('/actions', '', $relative_path);
+    $relative_path = rtrim($relative_path, '/');
+    
+    // Build base URL
+    $base_url = $protocol . '://' . $host;
+    if (!empty($relative_path)) {
+        $base_url .= '/' . ltrim($relative_path, '/');
+    }
+    
+    return $base_url;
+}
+
+function build_redirect_url($path) {
+    return build_base_url() . $path;
 }
 
 // Get reference from query string (callback) or POST (webhook)
