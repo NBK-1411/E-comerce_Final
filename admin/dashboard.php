@@ -146,11 +146,26 @@ if (!$user || !is_array($user)) {
 
 // Get all categories for Categories tab
 try {
+    // Venue categories (exclude activity-tagged ones in DAL)
     $all_categories = get_categories_with_venue_count_ctr();
     if (!is_array($all_categories))
         $all_categories = [];
+
+    // Activity categories are stored in the same table but tagged via description prefix
+    $all_activity_categories = [];
+    $all_raw_categories = get_all_categories_ctr();
+    if (is_array($all_raw_categories)) {
+        foreach ($all_raw_categories as $cat) {
+            if (isset($cat['cat_description']) && strpos($cat['cat_description'], '__ACTIVITY__ ') === 0) {
+                // Strip marker for display
+                $cat['cat_description'] = trim(substr($cat['cat_description'], strlen('__ACTIVITY__ ')));
+                $all_activity_categories[] = $cat;
+            }
+        }
+    }
 } catch (Exception $e) {
     $all_categories = [];
+    $all_activity_categories = [];
     error_log("Error loading categories: " . $e->getMessage());
 }
 ?>
@@ -1108,17 +1123,67 @@ try {
 
                 <!-- Activity Categories Grid -->
                 <div class="rounded-lg border border-border bg-card p-6 mt-6">
-                    <div class="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-                            class="mb-4 opacity-50">
-                            <path d="M3 3h18v18H3z" />
-                            <path d="M3 9h18" />
-                            <path d="M9 21V9" />
-                        </svg>
-                        <p class="text-lg font-medium mb-1">No activity categories yet</p>
-                        <p class="text-sm">Click "Add Category" to create activity categories</p>
-                    </div>
+                    <?php if (empty($all_activity_categories)): ?>
+                        <div class="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                                class="mb-4 opacity-50">
+                                <path d="M3 3h18v18H3z" />
+                                <path d="M3 9h18" />
+                                <path d="M9 21V9" />
+                            </svg>
+                            <p class="text-lg font-medium mb-1">No activity categories yet</p>
+                            <p class="text-sm">Click "Add Category" to create activity categories</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                            <?php foreach ($all_activity_categories as $category): ?>
+                                <div
+                                    class="flex items-center justify-between p-3 border border-border rounded-lg bg-card hover:bg-muted/30 transition-colors">
+                                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                                        <div
+                                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary flex-shrink-0">
+                                            <span class="text-xl">
+                                                ⚡
+                                            </span>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <h3 class="text-sm font-semibold text-foreground truncate">
+                                                <?php echo htmlspecialchars($category['cat_name']); ?>
+                                            </h3>
+                                            <p class="text-xs text-muted-foreground">
+                                                <?php echo htmlspecialchars($category['cat_description'] ?? 'Activity category'); ?>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1 flex-shrink-0">
+                                        <button onclick='editCategory(<?php echo json_encode($category); ?>, "activity")'
+                                            class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                                            title="Edit category">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round">
+                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                                <path d="m15 5 4 4" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            onclick="deleteCategory(<?php echo $category['cat_id']; ?>, '<?php echo htmlspecialchars($category['cat_name'], ENT_QUOTES); ?>', 'activity')"
+                                            class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
+                                            title="Delete category">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round">
+                                                <path d="M3 6h18" />
+                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -1144,11 +1209,27 @@ try {
             if (activeTab) {
                 activeTab.classList.add('active');
             }
+
+            // Remember last active tab so we can restore it after reloads
+            try {
+                localStorage.setItem('adminActiveTab', tabName);
+            } catch (e) {
+                // Ignore storage errors (e.g., private mode)
+            }
         }
 
-        // Initialize with overview tab
+        // Initialize with last active tab (default to overview)
         document.addEventListener('DOMContentLoaded', function () {
-            showTab('overview');
+            let initialTab = 'overview';
+            try {
+                const saved = localStorage.getItem('adminActiveTab');
+                if (saved) {
+                    initialTab = saved;
+                }
+            } catch (e) {
+                // Fallback to overview if storage not available
+            }
+            showTab(initialTab);
         });
     </script>
     <style>
@@ -1189,6 +1270,7 @@ try {
 
             <form id="categoryForm" class="space-y-4">
                 <input type="hidden" id="categoryId">
+                <input type="hidden" id="categoryScope" name="scope" value="venue">
 
                 <div>
                     <label for="categoryName" class="block text-sm font-medium text-foreground mb-2">Category Name
@@ -1295,6 +1377,12 @@ try {
 
             const typeLabel = type === 'activity' ? 'Activity' : 'Venue';
             document.getElementById('categoryModalTitle').textContent = `Add New ${typeLabel} Category`;
+
+            // Persist scope so backend knows this is an activity vs venue category
+            const scopeInput = document.getElementById('categoryScope');
+            if (scopeInput) {
+                scopeInput.value = type === 'activity' ? 'activity' : 'venue';
+            }
         }
 
         function closeCategoryModal() {
@@ -1302,18 +1390,29 @@ try {
             document.getElementById('categoryModal').classList.remove('flex');
         }
 
-        function editCategory(category) {
-            document.getElementById('categoryId').value = category.cat_id;
-            document.getElementById('categoryName').value = category.cat_name;
-            document.getElementById('categoryDescription').value = category.cat_description || '';
+        function editCategory(category, type = 'venue') {
+            // Reset and open the modal in the correct mode
+            document.getElementById('categoryForm').reset();
+            const modal = document.getElementById('categoryModal');
+            const idField = document.getElementById('categoryId');
+            const scopeField = document.getElementById('categoryScope');
+            const nameField = document.getElementById('categoryName');
+            const descField = document.getElementById('categoryDescription');
+            const iconField = document.getElementById('categoryIcon');
+
+            idField.value = category.cat_id;
+            nameField.value = category.cat_name || '';
+            descField.value = category.cat_description || '';
+
+            // Set scope based on whether this is a venue or activity category
+            if (scopeField) {
+                scopeField.value = type === 'activity' ? 'activity' : 'venue';
+            }
 
             // Handle icon selection
             const icon = category.cat_icon || 'grid';
-            // Clean icon string if it has fontawesome classes
             const cleanIcon = icon.replace('fas fa-', '').replace('fa-', '');
-
-            document.getElementById('categoryIcon').value = cleanIcon;
-            document.getElementById('categoryModalTitle').textContent = 'Edit Category';
+            iconField.value = cleanIcon;
 
             // Update visual selection
             document.querySelectorAll('.icon-option').forEach(b => {
@@ -1325,12 +1424,15 @@ try {
                 }
             });
 
-            document.getElementById('categoryModal').classList.remove('hidden');
-            document.getElementById('categoryModal').classList.add('flex');
+            const typeLabel = type === 'activity' ? 'Activity' : 'Venue';
+            document.getElementById('categoryModalTitle').textContent = 'Edit ' + typeLabel + ' Category';
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         }
 
-        function deleteCategory(id, name) {
-            if (!confirm(`Are you sure you want to delete the category "${name}"? This action cannot be undone.`)) {
+        function deleteCategory(id, name, type = 'venue') {
+            if (!confirm(`Are you sure you want to delete the ${type} category "${name}"? This action cannot be undone.`)) {
                 return;
             }
 
@@ -1363,6 +1465,11 @@ try {
             formData.append('cat_name', document.getElementById('categoryName').value);
             formData.append('cat_description', document.getElementById('categoryDescription').value);
             formData.append('cat_icon', document.getElementById('categoryIcon').value);
+
+            const scopeInput = document.getElementById('categoryScope');
+            if (scopeInput) {
+                formData.append('scope', scopeInput.value || 'venue');
+            }
 
             const url = categoryId ? '../actions/update_category_action.php' : '../actions/add_category_action.php';
             if (categoryId) {

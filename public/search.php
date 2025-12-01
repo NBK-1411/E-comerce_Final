@@ -65,7 +65,7 @@ if ($type === 'activity') {
         });
     }
 } else {
-    // Get venues based on filters
+// Get venues based on filters
     $results = search_venues_ctr($filters);
     if ($results === false) {
         $results = [];
@@ -99,7 +99,6 @@ $category_pills = [];
 if ($type === 'activity') {
     // Activity category filters (matching index page)
     $activity_filters = [
-        ['id' => 'all', 'label' => 'All'],
         ['id' => 'workshop', 'label' => 'Workshops'],
         ['id' => 'food', 'label' => 'Food Tours'],
         ['id' => 'adventure', 'label' => 'Adventure'],
@@ -117,8 +116,12 @@ if ($type === 'activity') {
 } else {
     // Venue categories
     foreach ($categories as $cat) {
+        $slug = strtolower(trim(preg_replace('/[^a-z0-9]+/', '-', $cat['cat_name']), '-'));
+        if (empty($slug)) {
+            $slug = 'category-' . $cat['cat_id'];
+        }
         $category_pills[] = [
-            'id' => strtolower(str_replace(' ', '-', $cat['cat_name'])),
+            'id' => $slug,
             'name' => $cat['cat_name'],
             'icon' => 'grid'
         ];
@@ -273,7 +276,7 @@ if ($type === 'activity') {
                         onmouseout="<?php echo $recurrence_filter !== 'none' ? "this.style.color='var(--text-secondary)'" : ''; ?>">
                         One-Time Only
                     </a>
-                </div>
+                        </div>
             <?php endif; ?>
 
             <!-- Category Pills -->
@@ -314,35 +317,35 @@ if ($type === 'activity') {
 
             <!-- Results Count -->
             <div class="mb-4 flex items-center justify-between text-sm" style="color: var(--text-secondary);">
-                <span><?php echo count($results); ?> results found</span>
+                <span id="resultsCount"><?php echo count($results); ?> results found</span>
                 <?php if (!empty($search_query)): ?>
                     <span>Searching for "<?php echo htmlspecialchars($search_query); ?>"</span>
                 <?php endif; ?>
             </div>
 
-            <!-- Results Grid -->
-                <?php if (empty($results)): ?>
-                <div class="flex flex-col items-center justify-center py-16 text-center">
-                    <div class="mb-4 rounded-full p-4" style="background-color: var(--bg-card);">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" style="color: var(--text-secondary);" viewBox="0 0 24 24"
-                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round">
-                            <circle cx="11" cy="11" r="8" />
-                            <path d="m21 21-4.35-4.35" />
-                        </svg>
-                    </div>
-                    <h3 class="mb-1 font-semibold" style="color: var(--text-primary);">No <?php echo $type === 'activity' ? 'activities' : 'venues'; ?> found</h3>
-                    <p class="mb-4 text-sm" style="color: var(--text-secondary);">Try adjusting your filters or search query</p>
-                    <a href="search.php?type=<?php echo htmlspecialchars($type); ?>"
-                        class="rounded-lg border bg-transparent px-4 py-2 text-sm font-medium transition"
-                        style="border-color: var(--border-color); color: var(--text-primary);"
-                        onmouseover="this.style.backgroundColor='var(--bg-card)'"
-                        onmouseout="this.style.backgroundColor='transparent'">
-                        Clear all filters
-                    </a>
-                    </div>
-                <?php else: ?>
-                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <?php $has_results = !empty($results); ?>
+            <div id="noResultsMessage" class="<?php echo $has_results ? 'hidden' : 'flex'; ?> flex-col items-center justify-center py-16 text-center">
+                <div class="mb-4 rounded-full p-4" style="background-color: var(--bg-card);">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" style="color: var(--text-secondary);" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                </div>
+                <h3 class="mb-1 font-semibold" style="color: var(--text-primary);">No <?php echo $type === 'activity' ? 'activities' : 'venues'; ?> found</h3>
+                <p class="mb-4 text-sm" style="color: var(--text-secondary);">Try adjusting your filters or search query</p>
+                <a href="search.php?type=<?php echo htmlspecialchars($type); ?>"
+                    class="rounded-lg border bg-transparent px-4 py-2 text-sm font-medium transition"
+                    style="border-color: var(--border-color); color: var(--text-primary);"
+                    onmouseover="this.style.backgroundColor='var(--bg-card)'"
+                    onmouseout="this.style.backgroundColor='transparent'">
+                    Clear all filters
+                </a>
+            </div>
+
+            <?php if ($has_results): ?>
+                <div id="resultsGrid" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <?php if ($type === 'activity'): ?>
                             <?php foreach ($results as $activity):
                                 $photos = json_decode($activity['photos_json'] ?? '[]', true);
@@ -451,17 +454,19 @@ if ($type === 'activity') {
                         <?php else: ?>
                             <?php foreach ($results as $venue): 
                             $photos = json_decode($venue['photos_json'] ?? '[]', true);
-                        $first_photo = !empty($photos) ? $photos[0] : '../images/portfolio/01.jpg';
+                            $first_photo = !empty($photos) ? $photos[0] : '../images/portfolio/01.jpg';
                                 if (strpos($first_photo, 'uploads/venues/') === 0) {
                                     $first_photo = '../' . $first_photo;
                                 }
-                        $avg_rating = isset($venue['avg_rating']) ? number_format($venue['avg_rating'], 1) : '0.0';
-                        $review_count = isset($venue['review_count']) ? $venue['review_count'] : 0;
-                        $price_min = number_format($venue['price_min'], 0);
-                        $price_max = number_format($venue['price_max'], 0);
-                        ?>
+                            $avg_rating = isset($venue['avg_rating']) ? number_format($venue['avg_rating'], 1) : '0.0';
+                            $review_count = isset($venue['review_count']) ? $venue['review_count'] : 0;
+                            $price_min = number_format($venue['price_min'], 0);
+                            $price_max = number_format($venue['price_max'], 0);
+                            $venue_category_slug = strtolower(trim(preg_replace('/[^a-z0-9]+/', '-', $venue['cat_name'] ?? 'other'), '-'));
+                            ?>
                         <a href="venue_detail.php?id=<?php echo $venue['venue_id']; ?><?php echo $url_params; ?>"
                             class="group relative flex flex-col overflow-hidden rounded-xl transition-all hover:shadow-lg"
+                            data-venue-category="<?php echo htmlspecialchars($venue_category_slug); ?>"
                             style="background-color: var(--bg-card);">
                             <!-- Image -->
                             <div class="relative aspect-[4/3] overflow-hidden" style="background-color: var(--bg-primary);">
@@ -571,7 +576,7 @@ if ($type === 'activity') {
                                 </div>
                             </div>
                         </a>
-                            <?php endforeach; ?>
+                        <?php endforeach; ?>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
@@ -722,6 +727,40 @@ if ($type === 'activity') {
         // Category pills
         const categoryPills = document.querySelectorAll('.category-pill');
         const currentType = '<?php echo $type; ?>';
+        const activityCards = document.querySelectorAll('.activity-card');
+        const venueCards = document.querySelectorAll('[data-venue-category]');
+        const resultsCountLabel = document.getElementById('resultsCount');
+        const noResultsMessage = document.getElementById('noResultsMessage');
+        const resultsGrid = document.getElementById('resultsGrid');
+        const activityCategoryMap = {
+            workshop: ['workshop', 'class', 'classes', 'creative'],
+            food: ['food', 'popup', 'culinary', 'restaurant', 'dining'],
+            adventure: ['adventure', 'tour', 'meetup', 'hike', 'outdoor'],
+            concert: ['concert', 'nightlife', 'music', 'show'],
+            sports: ['sports', 'game', 'fitness'],
+            festival: ['festival', 'cultural', 'event', 'fair']
+        };
+
+        function updateResultsState() {
+            const visibleCards = currentType === 'activity'
+                ? [...activityCards].filter(card => card.style.display !== 'none')
+                : [...venueCards].filter(card => card.style.display !== 'none');
+            if (resultsCountLabel) {
+                resultsCountLabel.textContent = `${visibleCards.length} results found`;
+            }
+            if (noResultsMessage) {
+                if (visibleCards.length === 0) {
+                    noResultsMessage.classList.remove('hidden');
+                    noResultsMessage.classList.add('flex');
+                } else {
+                    noResultsMessage.classList.add('hidden');
+                    noResultsMessage.classList.remove('flex');
+                }
+            }
+            if (resultsGrid) {
+                resultsGrid.classList.toggle('hidden', visibleCards.length === 0);
+            }
+        }
         
         categoryPills.forEach(pill => {
             pill.addEventListener('click', () => {
@@ -737,29 +776,25 @@ if ($type === 'activity') {
                 const category = pill.dataset.category;
                 if (category !== 'all') {
                     if (currentType === 'activity') {
-                        // Filter activities by category (client-side for now)
-                        const activityCards = document.querySelectorAll('a[href*="type=activity"]');
+                        const categorySlug = category.replace(/-/g, ' ');
+                        const synonyms = activityCategoryMap[category] || [];
                         activityCards.forEach(card => {
                             const typeText = card.querySelector('span.font-medium')?.textContent?.toLowerCase() || '';
-                            const categorySlug = category.replace('-', ' ');
-                            // Check if activity type matches category
-                            if (typeText.includes(categorySlug) || 
-                                (category === 'workshop' && (typeText.includes('workshop') || typeText.includes('class'))) ||
-                                (category === 'food' && (typeText.includes('food') || typeText.includes('popup'))) ||
-                                (category === 'adventure' && (typeText.includes('adventure') || typeText.includes('tour') || typeText.includes('meetup'))) ||
-                                (category === 'sports' && (typeText.includes('sports') || typeText.includes('game'))) ||
-                                (category === 'concert' && (typeText.includes('concert') || typeText.includes('nightlife')))) {
+                            const dataType = card.dataset.activityType || '';
+                            const matchesSlug = dataType.includes(categorySlug);
+                            const matchesText = typeText.includes(categorySlug);
+                            const matchesSynonym = synonyms.some(term => typeText.includes(term) || dataType.includes(term));
+                            if (matchesSlug || matchesText || matchesSynonym) {
                                 card.style.display = '';
                             } else {
                                 card.style.display = 'none';
                             }
                         });
                     } else {
-                        // Filter venues by category (client-side for now)
-                        const venueCards = document.querySelectorAll('a[href*="venue_detail"]');
+                        // Filter venues by category using slug
                         venueCards.forEach(card => {
-                            const categoryText = card.querySelector('span.font-medium')?.textContent?.toLowerCase() || '';
-                            if (categoryText.includes(category.replace('-', ' '))) {
+                            const cardCategory = card.dataset.venueCategory || '';
+                            if (cardCategory === category) {
                                 card.style.display = '';
                             } else {
                                 card.style.display = 'none';
@@ -769,17 +804,17 @@ if ($type === 'activity') {
                 } else {
                     // Show all
                     if (currentType === 'activity') {
-                        document.querySelectorAll('a[href*="type=activity"]').forEach(card => {
-                            card.style.display = '';
-                        });
+                        activityCards.forEach(card => { card.style.display = ''; });
                     } else {
-                        document.querySelectorAll('a[href*="venue_detail"]').forEach(card => {
-                            card.style.display = '';
-                        });
+                        venueCards.forEach(card => { card.style.display = ''; });
                     }
                 }
+                updateResultsState();
             });
         });
+
+        // Initialize counts on load
+        updateResultsState();
 
         // Save Venue/Activity Functionality
         document.addEventListener('click', function(e) {

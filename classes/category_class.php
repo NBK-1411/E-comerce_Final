@@ -61,9 +61,11 @@ class Category extends db_connection {
      * Get categories with venue count
      */
     public function get_categories_with_venue_count() {
+        // Exclude activity-only categories (those we tagged via description prefix)
         $sql = "SELECT c.*, COUNT(v.venue_id) as venue_count 
                 FROM categories c 
                 LEFT JOIN venue v ON c.cat_id = v.cat_id AND v.status = 'approved'
+                WHERE c.cat_description NOT LIKE '__ACTIVITY__ %' OR c.cat_description IS NULL
                 GROUP BY c.cat_id 
                 ORDER BY c.cat_name ASC";
         return $this->read($sql);

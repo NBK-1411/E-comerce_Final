@@ -20,9 +20,24 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $cat_id = isset($_POST['cat_id']) ? intval($_POST['cat_id']) : 0;
-$name = isset($_POST['name']) ? trim($_POST['name']) : '';
-$description = isset($_POST['description']) ? trim($_POST['description']) : '';
-$icon = isset($_POST['icon']) ? trim($_POST['icon']) : '';
+// Support both admin/category.php (name/description/icon) and admin/dashboard.php (cat_name/cat_description/cat_icon)
+$name = isset($_POST['name']) ? trim($_POST['name']) : (isset($_POST['cat_name']) ? trim($_POST['cat_name']) : '');
+$description = isset($_POST['description']) ? trim($_POST['description']) : (isset($_POST['cat_description']) ? trim($_POST['cat_description']) : '');
+$icon = isset($_POST['icon']) ? trim($_POST['icon']) : (isset($_POST['cat_icon']) ? trim($_POST['cat_icon']) : '');
+
+// Optional scope: 'venue' or 'activity' to keep activity categories separate in the UI
+$scope = isset($_POST['scope']) ? trim($_POST['scope']) : 'venue';
+if ($scope === 'activity') {
+    // Ensure activity categories keep the marker prefix
+    if (strpos($description, '__ACTIVITY__ ') !== 0) {
+        $description = '__ACTIVITY__ ' . $description;
+    }
+} else {
+    // Strip marker if an activity category is being converted back to a venue category
+    if (strpos($description, '__ACTIVITY__ ') === 0) {
+        $description = trim(substr($description, strlen('__ACTIVITY__ ')));
+    }
+}
 
 if (empty($cat_id) || empty($name)) {
     echo json_encode(['success' => false, 'message' => 'Category ID and name are required']);

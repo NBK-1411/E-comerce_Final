@@ -19,9 +19,18 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-$name = isset($_POST['name']) ? trim($_POST['name']) : '';
-$description = isset($_POST['description']) ? trim($_POST['description']) : '';
-$icon = isset($_POST['icon']) ? trim($_POST['icon']) : '';
+// Support both admin/category.php (name/description/icon) and admin/dashboard.php (cat_name/cat_description/cat_icon)
+$name = isset($_POST['name']) ? trim($_POST['name']) : (isset($_POST['cat_name']) ? trim($_POST['cat_name']) : '');
+$description = isset($_POST['description']) ? trim($_POST['description']) : (isset($_POST['cat_description']) ? trim($_POST['cat_description']) : '');
+$icon = isset($_POST['icon']) ? trim($_POST['icon']) : (isset($_POST['cat_icon']) ? trim($_POST['cat_icon']) : '');
+
+// Optional scope: 'venue' or 'activity'. For now we only persist one categories table,
+// but we use this to conceptually separate activity categories in the admin UI.
+$scope = isset($_POST['scope']) ? trim($_POST['scope']) : 'venue';
+if ($scope === 'activity') {
+    // Prefix description so we can distinguish activity categories in the dashboard
+    $description = '__ACTIVITY__ ' . $description;
+}
 
 if (empty($name)) {
     echo json_encode(['success' => false, 'message' => 'Category name is required']);
