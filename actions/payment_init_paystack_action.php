@@ -18,19 +18,21 @@ require_once(__DIR__ . '/../settings/db_cred.php');
 require_once(__DIR__ . '/../controllers/booking_controller.php');
 require_once(__DIR__ . '/../controllers/payment_controller.php');
 
-// Check if logged in
-if (!is_logged_in()) {
+// Helper function to send clean JSON response
+function send_json_response($data) {
     ob_clean();
-    echo json_encode(['success' => false, 'message' => 'Please login to continue']);
+    echo json_encode($data);
     ob_end_flush();
     exit();
 }
 
+// Check if logged in
+if (!is_logged_in()) {
+    send_json_response(['success' => false, 'message' => 'Please login to continue']);
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    ob_clean();
-    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
-    ob_end_flush();
-    exit();
+    send_json_response(['success' => false, 'message' => 'Invalid request method']);
 }
 
 $user_id = $_SESSION['customer_id'];
