@@ -84,7 +84,18 @@ if (!$payment_id) {
 
 // Build callback URL - use a more reliable method that works on live servers
 function build_base_url() {
-    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+    // Detect protocol - check multiple ways for better compatibility
+    $protocol = 'http';
+    if (isset($_SERVER['HTTPS'])) {
+        if ($_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] === '1') {
+            $protocol = 'https';
+        }
+    } elseif (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) {
+        $protocol = 'https';
+    } elseif (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+        $protocol = 'https';
+    }
+    
     $host = $_SERVER['HTTP_HOST'];
     
     // Get the script directory relative to document root
@@ -113,6 +124,9 @@ function build_base_url() {
 
 $callback_url_final = !empty($callback_url) ? $callback_url : build_base_url() . '/actions/payment_verify_paystack_action.php';
 
+// Ensure callback URL is properly formatted (no double slashes, proper encoding)
+$callback_url_final = preg_replace('#([^:])//+#', '$1/', $callback_url_final);
+
 // Initialize Paystack transaction
 $paystack_data = [
     'email' => $user_email,
@@ -139,10 +153,18 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 
 $response = curl_exec($ch);
 $error = curl_error($ch);
+$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
 if ($error) {
-    echo json_encode(['success' => false, 'message' => 'Payment gateway error: ' . $error]);
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Payment gateway connection error: ' . $error,
+        'debug' => [
+            'callback_url' => $callback_url_final,
+            'http_code' => $http_code
+        ]
+    ]);
     exit();
 }
 
@@ -150,7 +172,20 @@ $result = json_decode($response, true);
 
 if (!$result || !isset($result['status']) || !$result['status']) {
     $message = isset($result['message']) ? $result['message'] : 'Failed to initialize payment';
-    echo json_encode(['success' => false, 'message' => $message]);
+    $debug_info = [
+        'callback_url' => $callback_url_final,
+        'http_code' => $http_code,
+        'paystack_response' => $result
+    ];
+    
+    // Log the error for debugging (remove in production if needed)
+    error_log('Paystack Init Error: ' . json_encode($debug_info));
+    
+    echo json_encode([
+        'success' => false, 
+        'message' => $message,
+        'debug' => $debug_info
+    ]);
     exit();
 }
 
