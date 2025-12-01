@@ -3,6 +3,14 @@
  * Create Booking Action - JSON Endpoint
  */
 
+// Suppress error output to prevent breaking JSON response
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
+// Start output buffering to catch any unexpected output
+ob_start();
+
 header('Content-Type: application/json');
 
 require_once(__DIR__ . '/../controllers/booking_controller.php');
@@ -12,15 +20,21 @@ require_once(__DIR__ . '/../controllers/venue_controller.php');
 require_once(__DIR__ . '/../controllers/customer_controller.php');
 require_once(__DIR__ . '/../settings/core.php');
 
-// Check if logged in
-if (!is_logged_in()) {
-    echo json_encode(['success' => false, 'message' => 'Please login to continue']);
+// Helper function to send clean JSON response
+function send_json_response($data) {
+    ob_clean();
+    echo json_encode($data);
+    ob_end_flush();
     exit();
 }
 
+// Check if logged in
+if (!is_logged_in()) {
+    send_json_response(['success' => false, 'message' => 'Please login to continue']);
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
-    exit();
+    send_json_response(['success' => false, 'message' => 'Invalid request method']);
 }
 
 $customer_id = $_SESSION['customer_id'];
@@ -40,31 +54,26 @@ $payment_method = isset($_POST['payment_method']) ? trim($_POST['payment_method'
 
 // Validation
 if (empty($venue_id)) {
-    echo json_encode(['success' => false, 'message' => 'Venue ID is required']);
-    exit();
+    send_json_response(['success' => false, 'message' => 'Venue ID is required']);
 }
 
 if (empty($booking_date)) {
-    echo json_encode(['success' => false, 'message' => 'Booking date is required']);
-    exit();
+    send_json_response(['success' => false, 'message' => 'Booking date is required']);
 }
 
 if (empty($start_time) || empty($end_time)) {
-    echo json_encode(['success' => false, 'message' => 'Start and end time are required']);
-    exit();
+    send_json_response(['success' => false, 'message' => 'Start and end time are required']);
 }
 
 // Allow 0 amount only for reservations
 if ($total_amount <= 0 && $payment_method !== 'reservation') {
-    echo json_encode(['success' => false, 'message' => 'Invalid booking amount']);
-    exit();
+    send_json_response(['success' => false, 'message' => 'Invalid booking amount']);
 }
 
 // Validate date is not in the past
 $today = date('Y-m-d');
 if ($booking_date < $today) {
-    echo json_encode(['success' => false, 'message' => 'Cannot book dates in the past']);
-    exit();
+    send_json_response(['success' => false, 'message' => 'Cannot book dates in the past']);
 }
 
 // Create booking
@@ -84,8 +93,7 @@ $booking_data = [
 $booking_id = create_booking_ctr($booking_data);
 
 if (!$booking_id) {
-    echo json_encode(['success' => false, 'message' => 'Failed to create booking. Please try again.']);
-    exit();
+    send_json_response(['success' => false, 'message' => 'Failed to create booking. Please try again.']);
 }
 
 // Get venue and customer info for notification
@@ -110,19 +118,18 @@ if ($venue && $customer && isset($venue['created_by'])) {
 // Payment method specific processing
 if ($payment_method === 'reservation') {
     // For reservations, no payment is required
-    echo json_encode([
+    send_json_response([
         'success' => true,
         'message' => 'Reservation request sent successfully.',
         'booking_id' => $booking_id,
         'payment_method' => 'reservation',
         'payment_required' => false
     ]);
-    exit();
 
 } else if ($payment_method === 'paystack') {
     // For Paystack, booking is created first, then payment is initialized separately
     // Return booking_id so frontend can call payment_init_paystack_action.php
-    echo json_encode([
+    send_json_response([
         'success' => true,
         'message' => 'Booking created. Please proceed to payment.',
         'booking_id' => $booking_id,
@@ -130,14 +137,12 @@ if ($payment_method === 'reservation') {
         'payment_required' => true,
         'requires_payment_init' => true
     ]);
-    exit();
 
 } else if ($payment_method === 'momo') {
     $momo_number = isset($_POST['momo_number']) ? trim($_POST['momo_number']) : '';
     
     if (empty($momo_number)) {
-        echo json_encode(['success' => false, 'message' => 'Mobile Money number is required']);
-        exit();
+        send_json_response(['success' => false, 'message' => 'Mobile Money number is required']);
     }
     
     // Legacy MoMo processing (can be kept for backward compatibility)
@@ -160,11 +165,10 @@ if ($payment_method === 'reservation') {
     $payment_id = create_payment_ctr($payment_data);
 
 if (!$payment_id) {
-    echo json_encode(['success' => false, 'message' => 'Booking created but payment processing failed']);
-    exit();
+    send_json_response(['success' => false, 'message' => 'Booking created but payment processing failed']);
 }
 
-    echo json_encode([
+    send_json_response([
         'success' => true,
         'message' => 'Booking created. Awaiting payment confirmation.',
         'booking_id' => $booking_id,
@@ -172,8 +176,7 @@ if (!$payment_id) {
     ]);
 
 } else {
-    echo json_encode(['success' => false, 'message' => 'Invalid payment method. Please use Paystack.']);
-    exit();
+    send_json_response(['success' => false, 'message' => 'Invalid payment method. Please use Paystack.']);
 }
 
 ?>

@@ -3,6 +3,14 @@
  * Initialize Paystack Payment - JSON Endpoint
  */
 
+// Suppress error output to prevent breaking JSON response
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
+// Start output buffering to catch any unexpected output
+ob_start();
+
 header('Content-Type: application/json');
 
 require_once(__DIR__ . '/../settings/core.php');
@@ -12,12 +20,16 @@ require_once(__DIR__ . '/../controllers/payment_controller.php');
 
 // Check if logged in
 if (!is_logged_in()) {
+    ob_clean();
     echo json_encode(['success' => false, 'message' => 'Please login to continue']);
+    ob_end_flush();
     exit();
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    ob_clean();
     echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+    ob_end_flush();
     exit();
 }
 
@@ -37,8 +49,7 @@ if (empty($user_email)) {
 }
 
 if (empty($user_email)) {
-    echo json_encode(['success' => false, 'message' => 'User email is required for payment']);
-    exit();
+    send_json_response(['success' => false, 'message' => 'User email is required for payment']);
 }
 
 // Get form data
@@ -48,20 +59,17 @@ $callback_url = isset($_POST['callback_url']) ? trim($_POST['callback_url']) : '
 
 // Validation
 if (empty($booking_id)) {
-    echo json_encode(['success' => false, 'message' => 'Booking ID is required']);
-    exit();
+    send_json_response(['success' => false, 'message' => 'Booking ID is required']);
 }
 
 if ($amount <= 0) {
-    echo json_encode(['success' => false, 'message' => 'Invalid amount']);
-    exit();
+    send_json_response(['success' => false, 'message' => 'Invalid amount']);
 }
 
 // Get booking details
 $booking = get_booking_by_id_ctr($booking_id);
 if (!$booking || $booking['user_id'] != $user_id) {
-    echo json_encode(['success' => false, 'message' => 'Invalid booking']);
-    exit();
+    send_json_response(['success' => false, 'message' => 'Invalid booking']);
 }
 
 // Create payment record first
@@ -78,8 +86,7 @@ $payment_data = [
 $payment_id = create_payment_ctr($payment_data);
 
 if (!$payment_id) {
-    echo json_encode(['success' => false, 'message' => 'Failed to create payment record']);
-    exit();
+    send_json_response(['success' => false, 'message' => 'Failed to create payment record']);
 }
 
 // Build callback URL - use a more reliable method that works on live servers
@@ -157,7 +164,7 @@ $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
 if ($error) {
-    echo json_encode([
+    send_json_response([
         'success' => false, 
         'message' => 'Payment gateway connection error: ' . $error,
         'debug' => [
@@ -165,7 +172,6 @@ if ($error) {
             'http_code' => $http_code
         ]
     ]);
-    exit();
 }
 
 $result = json_decode($response, true);
@@ -181,12 +187,11 @@ if (!$result || !isset($result['status']) || !$result['status']) {
     // Log the error for debugging (remove in production if needed)
     error_log('Paystack Init Error: ' . json_encode($debug_info));
     
-    echo json_encode([
+    send_json_response([
         'success' => false, 
         'message' => $message,
         'debug' => $debug_info
     ]);
-    exit();
 }
 
 // Update payment with Paystack reference
@@ -194,7 +199,7 @@ $paystack_reference = $result['data']['reference'];
 update_payment_paystack_ctr($payment_id, $paystack_reference, null, 'pending', $result['data']);
 
 // Return authorization URL for redirect
-echo json_encode([
+send_json_response([
     'success' => true,
     'authorization_url' => $result['data']['authorization_url'],
     'access_code' => $result['data']['access_code'],
